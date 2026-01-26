@@ -1,0 +1,89 @@
+{
+  "Records": [
+    {
+      "eventID": "c8ab1ff1b72cd22b9394b3e6621099ad",
+      "eventName": "INSERT",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "us-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1769459451.0,
+        "Keys": {
+          "videoId": {
+            "S": "mkvltfiozmaT"
+          }
+        },
+        "NewImage": {
+          "fileName": {
+            "S": "Video Project 1"
+          },
+          "created": {
+            "S": "2026-01-26 17:13:10"
+          },
+          "totalTime": {
+            "N": "10"
+          },
+          "videoId": {
+            "S": "mkvltfiozmaT"
+          },
+          "userId": {
+            "S": "848834a8-20e1-7004-ee3b-4ba1495239d8"
+          },
+          "quality": {
+            "S": "medium"
+          },
+          "maxRetry": {
+            "N": "3"
+          },
+          "retries": {
+            "N": "0"
+          },
+          "extensionFile": {
+            "S": "mp4"
+          },
+          "timeInterval": {
+            "L": [
+              {
+                "S": "2"
+              },
+              {
+                "S": "3"
+              },
+              {
+                "S": "4"
+              },
+              {
+                "S": "5"
+              },
+              {
+                "S": "6"
+              },
+              {
+                "S": "7"
+              },
+              {
+                "S": "8"
+              }
+            ]
+          },
+          "startTime": {
+            "N": "2"
+          },
+          "endTime": {
+            "N": "8"
+          },
+          "status": {
+            "S": "UPLOADED"
+          },
+          "unitTime": {
+            "S": "s"
+          }
+        },
+        "SequenceNumber": "56454500003530196814361293",
+        "SizeBytes": 259,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:us-east-1:080145351546:table/VideoSlice/stream/2026-01-26T20:20:36.322"
+    }
+  ]
+}
