@@ -107,6 +107,9 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.python.xunit.reportPath=test-results.xml
             -Dsonar.qualitygate.wait=true
+            -Dsonar.scm.disabled=true
+            -Dsonar.scm.provider=git
+            -Dsonar.scm.forceReloadAll=false
 
   approval:
     name: Aprovação Manual
