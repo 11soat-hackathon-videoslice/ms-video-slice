@@ -11,14 +11,15 @@ class LogEntryDTO:
     timestamp: str
     info: str
 
+    def _validate_required_string(self, value: str, field_name: str) -> None:
+        """Valida campo string obrigatório"""
+        if not value or not isinstance(value, str) or value.strip() == "":
+            raise ValueError(f"O campo '{field_name}' é obrigatório e deve ser uma string não vazia")
+
     def validate(self) -> bool:
-
-        if not self.timestamp or not isinstance(self.timestamp, str) or self.timestamp.strip() == "":
-            raise Exception("O campo 'timestamp' é obrigatório e deve ser uma string não vazia", "timestamp")
-
-        if not self.info or not isinstance(self.info, str) or self.info.strip() == "":
-            raise Exception("O campo 'info' é obrigatório e deve ser uma string não vazia", "info")
-
+        """Valida campos obrigatórios do LogEntry"""
+        self._validate_required_string(self.timestamp, "timestamp")
+        self._validate_required_string(self.info, "info")
         return True
 
     def to_dict(self) -> dict:
@@ -48,90 +49,71 @@ class VdscMetadataDTO:
     quality: str
     logs: List[LogEntryDTO]
 
-    def validate(self) -> bool:
-        # Validação de campos string obrigatórios
-        if not self.video_id or not isinstance(self.video_id, str) or self.video_id.strip() == "":
-            raise Exception("O campo 'video_id' é obrigatório e deve ser uma string não vazia", "video_id")
+    def _validate_required_string(self, value: str, field_name: str) -> None:
+        """Valida campo string obrigatório"""
+        if not value or not isinstance(value, str) or value.strip() == "":
+            raise ValueError(f"O campo '{field_name}' é obrigatório e deve ser uma string não vazia")
 
-        if not self.file_name or not isinstance(self.file_name, str) or self.file_name.strip() == "":
-            raise Exception("O campo 'file_name' é obrigatório e deve ser uma string não vazia", "file_name")
+    def _validate_non_negative_integer(self, value: int, field_name: str) -> None:
+        """Valida campo inteiro não negativo"""
+        if not isinstance(value, int):
+            raise ValueError(f"O campo '{field_name}' deve ser um número inteiro")
+        if value < 0:
+            raise ValueError(f"O campo '{field_name}' deve ser um número positivo ou zero")
 
-        if not self.extension_file or not isinstance(self.extension_file, str) or self.extension_file.strip() == "":
-            raise Exception("O campo 'extension_file' é obrigatório e deve ser uma string não vazia", "extension_file")
+    def _validate_string_fields(self) -> None:
+        """Valida todos os campos string obrigatórios"""
+        self._validate_required_string(self.video_id, "video_id")
+        self._validate_required_string(self.file_name, "file_name")
+        self._validate_required_string(self.extension_file, "extension_file")
+        self._validate_required_string(self.status, "status")
+        self._validate_required_string(self.created, "created")
+        self._validate_required_string(self.user_id, "user_id")
+        self._validate_required_string(self.unit_time, "unit_time")
+        self._validate_required_string(self.quality, "quality")
 
-        if not self.status or not isinstance(self.status, str) or self.status.strip() == "":
-            raise Exception("O campo 'status' é obrigatório e deve ser uma string não vazia", "status")
+    def _validate_numeric_fields(self) -> None:
+        """Valida todos os campos numéricos"""
+        self._validate_non_negative_integer(self.total_time, "total_time")
+        self._validate_non_negative_integer(self.start_time, "start_time")
+        self._validate_non_negative_integer(self.end_time, "end_time")
+        self._validate_non_negative_integer(self.max_retry, "max_retry")
+        self._validate_non_negative_integer(self.retries, "retries")
 
-        if not self.created or not isinstance(self.created, str) or self.created.strip() == "":
-            raise Exception("O campo 'created' é obrigatório e deve ser uma string não vazia", "created")
-
-        if not self.user_id or not isinstance(self.user_id, str) or self.user_id.strip() == "":
-            raise Exception("O campo 'user_id' é obrigatório e deve ser uma string não vazia", "user_id")
-
-        if not self.unit_time or not isinstance(self.unit_time, str) or self.unit_time.strip() == "":
-            raise Exception("O campo 'unit_time' é obrigatório e deve ser uma string não vazia", "unit_time")
-
-        if not self.quality or not isinstance(self.quality, str) or self.quality.strip() == "":
-            raise Exception("O campo 'quality' é obrigatório e deve ser uma string não vazia", "quality")
-
-        # Validação de campos numéricos obrigatórios
-        if not isinstance(self.total_time, int):
-            raise Exception("O campo 'total_time' deve ser um número inteiro", "total_time")
-
-        if self.total_time < 0:
-            raise Exception("O campo 'total_time' deve ser um número positivo ou zero", "total_time")
-
-        if not isinstance(self.start_time, int):
-            raise Exception("O campo 'start_time' deve ser um número inteiro", "start_time")
-
-        if self.start_time < 0:
-            raise Exception("O campo 'start_time' deve ser um número positivo ou zero", "start_time")
-
-        if not isinstance(self.end_time, int):
-            raise Exception("O campo 'end_time' deve ser um número inteiro", "end_time")
-
-        if self.end_time < 0:
-            raise Exception("O campo 'end_time' deve ser um número positivo ou zero", "end_time")
-
+    def _validate_time_range(self) -> None:
+        """Valida intervalo de tempo"""
         if self.start_time > self.end_time:
-            raise Exception("O campo 'start_time' não pode ser maior que 'end_time'", "start_time")
+            raise ValueError("O campo 'start_time' não pode ser maior que 'end_time'")
 
-        if not isinstance(self.max_retry, int):
-            raise Exception("O campo 'max_retry' deve ser um número inteiro", "max_retry")
-
-        if self.max_retry < 0:
-            raise Exception("O campo 'max_retry' deve ser um número positivo ou zero", "max_retry")
-
-        if not isinstance(self.retries, int):
-            raise Exception("O campo 'retries' deve ser um número inteiro", "retries")
-
-        if self.retries < 0:
-            raise Exception("O campo 'retries' deve ser um número positivo ou zero", "retries")
-
-        # Validação de lista obrigatória (time_interval)
+    def _validate_time_interval_list(self) -> None:
+        """Valida lista de intervalos de tempo"""
         if not isinstance(self.time_interval, list):
-            raise Exception("O campo 'time_interval' deve ser uma lista", "time_interval")
-
+            raise ValueError("O campo 'time_interval' deve ser uma lista")
         if len(self.time_interval) == 0:
-            raise Exception("O campo 'time_interval' não pode ser uma lista vazia", "time_interval")
-
+            raise ValueError("O campo 'time_interval' não pode ser uma lista vazia")
         for idx, interval in enumerate(self.time_interval):
             if not isinstance(interval, str) or interval.strip() == "":
-                raise Exception(f"O item {idx} do 'time_interval' deve ser uma string não vazia", "time_interval")
+                raise ValueError(f"O item {idx} do 'time_interval' deve ser uma string não vazia")
 
-        # Validação de logs (pode ser vazio)
+    def _validate_logs_list(self) -> None:
+        """Valida lista de logs"""
         if not isinstance(self.logs, list):
-            raise Exception("O campo 'logs' deve ser uma lista", "logs")
-
-        # Valida cada log se a lista não estiver vazia
+            raise ValueError("O campo 'logs' deve ser uma lista")
         for idx, log in enumerate(self.logs):
             if not isinstance(log, LogEntryDTO):
-                raise Exception(f"O item {idx} do 'logs' deve ser uma instância de LogEntryDTO", "logs")
+                raise ValueError(f"O item {idx} do 'logs' deve ser uma instância de LogEntryDTO")
             try:
                 log.validate()
             except Exception as e:
-                raise Exception(f"Erro no log {idx}: {e.message}", "logs")
+                raise ValueError(f"Erro no log {idx}: {e.args[0] if e.args else str(e)}")
 
+    def validate(self) -> bool:
+        """Valida todos os campos do DTO"""
+        self._validate_string_fields()
+        self._validate_numeric_fields()
+        self._validate_time_range()
+        self._validate_time_interval_list()
+        self._validate_logs_list()
         return True
 
     def to_dict(self) -> dict:

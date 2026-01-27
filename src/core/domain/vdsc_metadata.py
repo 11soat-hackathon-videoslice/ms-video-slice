@@ -11,16 +11,17 @@ class VdscMetadata:
     def __init__(
         self,
         dto: VdscMetadataDTO,
-        status: str = VdscStatusEnum.UPLOADED.value,
-        created: Optional[datetime] = None,
-        retries: int = 0,
         logs: Optional[List[LogEntry]] = None
     ):
         self.video_id = dto.video_id
         self.file_name = dto.file_name
         self.extension_file = dto.extension_file
-        self.status = status
-        self.created = created or datetime.now(UTC)
+        self.status = dto.status
+        # Converter created para datetime se for string
+        if isinstance(dto.created, str):
+            self.created = datetime.fromisoformat(dto.created.replace('Z', '+00:00'))
+        else:
+            self.created = dto.created
         self.user_id = dto.user_id
         self.total_time = dto.total_time
         self.unit_time = dto.unit_time
@@ -28,9 +29,9 @@ class VdscMetadata:
         self.end_time = dto.end_time
         self.time_interval = dto.time_interval if dto.time_interval else []
         self.max_retry = dto.max_retry
-        self.retries = retries
+        self.retries = dto.retries
         self.quality = dto.quality
-        self.logs = logs if logs else []
+        self.logs = dto.logs if dto.logs else []
 
     def validate(self) -> bool:
         """Valida as regras de negócio para metadados de slice de vídeo."""
@@ -187,6 +188,4 @@ class VdscMetadata:
                 f"file_name='{self.file_name}', status='{self.status}', "
                 f"user_id='{self.user_id}', retries={self.retries}/{self.max_retry})")
 
-    @classmethod
-    def from_dto(cls, event):
-        pass
+

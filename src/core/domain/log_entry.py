@@ -8,9 +8,13 @@ class LogEntry:
 
     def __init__(
         self,
-        info: str
+        info: str,
+        timestamp: Optional[datetime] = None
     ):
-        self.timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+        if timestamp:
+            self.timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            self.timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
         self.info = info
 
     def to_dict(self) -> dict:

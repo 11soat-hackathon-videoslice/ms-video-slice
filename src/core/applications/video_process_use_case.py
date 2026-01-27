@@ -35,7 +35,7 @@ class VdscProcessUseCase:
             # Atualizando status de metadados para Processing ou Retrying
             if vdsc_metadata.status.upper() == VdscStatusEnum.UPLOADED.value.upper():
                 vdsc_metadata = self._metadata_update_status(vdsc_metadata, VdscStatusEnum.PROCESSING, LogEntry(f"Iniciando processamento do vídeo: {video_id}"))
-            elif vdsc_metadata.status.upper() == VdscStatusEnum.UPLOADED.value.upper():
+            elif vdsc_metadata.status.upper() == VdscStatusEnum.RETRYING.value.upper():
                 retries += 1
                 vdsc_metadata.retries = retries
                 log_message = f"Reiniciando processamento do vídeo: {video_id}. Tentativa {retries} de {max_retries}."
