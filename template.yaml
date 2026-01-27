@@ -56,7 +56,7 @@ Resources:
       MemorySize: 256
       Timeout: 60
       Handler: src.aws.handler.vdsc_process_handler.lambda_handler
-      Runtime: python3.14
+      Runtime: python3.12
       Architectures:
         - x86_64
       EphemeralStorage:
