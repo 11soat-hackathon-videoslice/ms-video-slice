@@ -204,7 +204,7 @@ jobs:
           sam deploy \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --stack-name ms-video-slice \
+            --stack-name vdsc-stack-ms-video-slice \
             --capabilities CAPABILITY_NAMED_IAM \
             --region ${{ env.AWS_REGION }} \
             --resolve-s3 \
