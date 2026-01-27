@@ -70,3 +70,36 @@ class TestVdscConfig:
         assert config.dynamodb['table_name'] == 'TestTable'
         # Reset singleton após o teste
         VdscConfig._instance = None
+
+    def test_parse_quality_json_format(self):
+        """Testa parsing de quality com formato JSON"""
+        VdscConfig._instance = None
+        config = VdscConfig()
+        quality_json = '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
+        result = config._parse_quality(quality_json)
+        assert isinstance(result, dict)
+        assert result['ultra'] == 1080
+        assert result['high'] == 720
+
+    def test_parse_quality_python_format(self):
+        """Testa parsing de quality com formato Python"""
+        VdscConfig._instance = None
+        config = VdscConfig()
+        quality_python = "{'ultra': 1080, 'high': 720, 'medium': 480, 'low': 360}"
+        result = config._parse_quality(quality_python)
+        assert isinstance(result, dict)
+        assert result['ultra'] == 1080
+        assert result['high'] == 720
+
+    def test_parse_quality_invalid_string(self):
+        """Testa parsing de quality com string inválida retorna padrão"""
+        VdscConfig._instance = None
+        config = VdscConfig()
+        quality_invalid = "invalid string"
+        result = config._parse_quality(quality_invalid)
+        assert isinstance(result, dict)
+        assert result['ultra'] == 1080
+        assert result['high'] == 720
+        assert result['medium'] == 480
+        assert result['low'] == 360
+

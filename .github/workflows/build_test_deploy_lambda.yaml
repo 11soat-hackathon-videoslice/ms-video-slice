@@ -63,7 +63,18 @@ jobs:
 
       - name: Executar testes com cobertura
         run: |
-          pytest tests/ --cov=src --cov-report=xml --cov-report=html --junitxml=test-results.xml
+          pytest tests/ --cov=src --cov-report=xml --cov-report=html --junitxml=test-results.xml -v
+
+      - name: Verificar arquivo de cobertura
+        run: |
+          ls -la
+          if [ -f coverage.xml ]; then
+            echo "✅ coverage.xml encontrado"
+            head -20 coverage.xml
+          else
+            echo "❌ coverage.xml NÃO encontrado"
+            exit 1
+          fi
 
       - name: Upload de relatório de cobertura
         uses: actions/upload-artifact@v4
@@ -84,11 +95,17 @@ jobs:
             -Dsonar.projectKey=11soat-hackton-videoslice_ms-video-slice
             -Dsonar.organization=11soat-hackton-videoslice
             -Dsonar.projectName=ms-video-slice
+            -Dsonar.projectVersion=1.0
             -Dsonar.branch.name=master
             -Dsonar.sources=src
             -Dsonar.tests=tests
-            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.exclusions=**/__pycache__/**,**/__init__.py,**/tests/**,**/exemplo_rapido_test.py
+            -Dsonar.language=py
             -Dsonar.python.version=3.14
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.coverage.exclusions=**/tests/**,**/__init__.py
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.python.xunit.reportPath=test-results.xml
             -Dsonar.qualitygate.wait=true
 
   approval:
