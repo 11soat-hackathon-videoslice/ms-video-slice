@@ -17,6 +17,7 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secret.AWS_ACCOUNT_ID }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION }}
   S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}
   S3_BUCKET_DIR_UPLOADS: ${{ vars.S3_BUCKET_DIR_UPLOADS }}
@@ -168,6 +169,7 @@ jobs:
             --resolve-s3 \
             --parameter-overrides \
               ParameterKey=AwsRegion,ParameterValue=${{ env.AWS_REGION }} \
+              ParameterKey=AwsAccountId,ParameterValue=${{ env.AWS_ACCOUNT_ID }} \
               ParameterKey=S3BucketName,ParameterValue=${{ env.S3_BUCKET_NAME }} \
               ParameterKey=S3BucketDirUploads,ParameterValue=${{ env.S3_BUCKET_DIR_UPLOADS }} \
               ParameterKey=S3BucketDirFinished,ParameterValue=${{ env.S3_BUCKET_DIR_FINISHED }} \

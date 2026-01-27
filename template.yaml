@@ -5,6 +5,9 @@ Parameters:
   AwsRegion:
     Type: String
     Description: Região AWS para recursos
+  AwsAccountId:
+    Type: String
+    Description: ID da conta AWS
   S3BucketName:
     Type: String
     Description: Nome do bucket S3 para armazenamento de vídeos
@@ -74,6 +77,7 @@ Resources:
       Environment:
         Variables:
           AWS_REGION: !Ref AwsRegion
+          AWS_ACCOUNT_ID: !Ref AwsAccountId
           S3_BUCKET_NAME: !Ref S3BucketName
           S3_BUCKET_DIR_UPLOADS: !Ref S3BucketDirUploads
           S3_BUCKET_DIR_FINISHED: !Ref S3BucketDirFinished
