@@ -148,11 +148,12 @@ jobs:
       always() &&
       needs.build-and-test.result == 'success' &&
       (
-        (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+        ((github.event_name == 'push' || github.event_name = 'workflow_dispatch') && github.ref == 'refs/heads/develop') ||
         (github.event_name == 'pull_request' && needs.approval.result == 'success')
-      )
+      ) &&
+      (needs.approval.result == 'success' || needs.approval.result == 'skipped')
     # Se for push na develop: executa direto após build-and-test (approval será skipped)
-    # Se for pull_request para master: só executa após aprovação manual bem-sucedid
+    # Se for pull_request para master: só executa após aprovação manual bem-sucedida
 
     steps:
       - name: Checkout do código
