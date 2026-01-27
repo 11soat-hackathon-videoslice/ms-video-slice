@@ -186,11 +186,11 @@ jobs:
           echo "📦 Preparando pacote de deploy..."
           mkdir -p lambda-package
           
-          if [ -f src/requirements-lambda.txt ]; then
+          if [ -f src/requirements.txt ]; then
             echo "📥 Instalando dependências Python de produção..."
-            pip install -r src/requirements-lambda.txt -t lambda-package/ --quiet --no-cache-dir
+            pip install -r src/requeriments.txt -t lambda-package/ --quiet --no-cache-dir
           elif [ -f src/requirements.txt ]; then
-            echo "⚠️ Usando requirements.txt (considere criar requirements-lambda.txt)"
+            echo "⚠️ Usando requirements.txt (considere criar requeriments.txt)"
             pip install -r src/requirements.txt -t lambda-package/ --quiet --no-cache-dir
           fi
           
