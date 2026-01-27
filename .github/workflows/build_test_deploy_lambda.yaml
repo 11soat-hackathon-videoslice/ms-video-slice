@@ -63,13 +63,24 @@ jobs:
 
       - name: Executar testes com cobertura
         run: |
-          pytest tests/ --cov=src --cov-report=xml --cov-report=html --junitxml=test-results.xml -v
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          pytest tests/ --cov=src --cov-report=xml:coverage.xml --cov-report=html --junitxml=test-results.xml -v
 
-      - name: Verificar arquivo de cobertura
+      - name: Verificar e corrigir arquivo de cobertura
         run: |
           ls -la
           if [ -f coverage.xml ]; then
             echo "✅ coverage.xml encontrado"
+            echo "📋 Conteúdo antes da correção:"
+            head -20 coverage.xml
+            
+            echo ""
+            echo "🔧 Corrigindo caminhos absolutos no coverage.xml..."
+            sed -i "s|<source>/home/runner/work/f5/f5/ms-video-slice</source>|<source>/github/workspace</source>|g" coverage.xml
+            sed -i "s|/home/runner/work/f5/f5/ms-video-slice/||g" coverage.xml
+            
+            echo ""
+            echo "📋 Conteúdo após a correção:"
             head -20 coverage.xml
           else
             echo "❌ coverage.xml NÃO encontrado"
@@ -107,7 +118,6 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.python.xunit.reportPath=test-results.xml
             -Dsonar.qualitygate.wait=true
-            -Dsonar.scm.disabled=true
             -Dsonar.scm.provider=git
             -Dsonar.scm.forceReloadAll=false
 
