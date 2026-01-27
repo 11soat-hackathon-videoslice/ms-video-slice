@@ -163,10 +163,10 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Configurar Python ${{ env.PYTHON_VERSION }}
+      - name: Configurar Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Configurar AWS Credentials
@@ -207,18 +207,18 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --resolve-s3 \
             --parameter-overrides \
-              ParameterKey=AwsRegion,ParameterValue=${{ env.AWS_REGION }} \
-              ParameterKey=AwsAccountId,ParameterValue=${{ env.AWS_ACCOUNT_ID }} \
-              ParameterKey=S3BucketName,ParameterValue=${{ env.S3_BUCKET_NAME }} \
-              ParameterKey=S3BucketDirUploads,ParameterValue=${{ env.S3_BUCKET_DIR_UPLOADS }} \
-              ParameterKey=S3BucketDirFinished,ParameterValue=${{ env.S3_BUCKET_DIR_FINISHED }} \
-              ParameterKey=S3BucketDirProcessing,ParameterValue=${{ env.S3_BUCKET_DIR_PROCESSING }} \
-              ParameterKey=EventBusName,ParameterValue=${{ env.EVENT_BUS_NAME }} \
-              ParameterKey=DynamoDbTableName,ParameterValue=${{ env.DYNAMODB_TABLE_NAME }} \
-              ParameterKey=DynamoDbStreamArn,ParameterValue=${{ env.DYNAMODB_STREAM_ARN }} \
-              ParameterKey=VdscPngCompressionLevel,ParameterValue=${{ env.VDSC_PNG_COMPRESSION_LEVEL }} \
-              ParameterKey=VdscZipCompressionLevel,ParameterValue=${{ env.VDSC_ZIP_COMPRESSION_LEVEL }} \
-              ParameterKey=VdscQuality,ParameterValue="${{ env.VDSC_QUALITY }}"
+              AwsRegion=${{ env.AWS_REGION }} \
+              AwsAccountId=${{ env.AWS_ACCOUNT_ID }} \
+              S3BucketName=${{ env.S3_BUCKET_NAME }} \
+              S3BucketDirUploads=${{ env.S3_BUCKET_DIR_UPLOADS }} \
+              S3BucketDirFinished=${{ env.S3_BUCKET_DIR_FINISHED }} \
+              S3BucketDirProcessing=${{ env.S3_BUCKET_DIR_PROCESSING }} \
+              EventBusName=${{ env.EVENT_BUS_NAME }} \
+              DynamoDbTableName=${{ env.DYNAMODB_TABLE_NAME }} \
+              DynamoDbStreamArn=${{ env.DYNAMODB_STREAM_ARN }} \
+              VdscPngCompressionLevel=${{ env.VDSC_PNG_COMPRESSION_LEVEL }} \
+              VdscZipCompressionLevel=${{ env.VDSC_ZIP_COMPRESSION_LEVEL }} \
+              VdscQuality="${{ env.VDSC_QUALITY }}"
 
       - name: Obter informações da stack
         run: |
