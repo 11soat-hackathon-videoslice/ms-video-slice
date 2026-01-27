@@ -129,3 +129,83 @@ class TestDictToDynamoDBFormat:
         result = dict_to_dynamodb_format({"tags": ["tag1", "tag2"]})
         assert "L" in result["tags"]
         assert len(result["tags"]["L"]) == 2
+
+    def test_convert_empty_dict(self):
+        """Testa conversão de dicionário vazio"""
+        result = dict_to_dynamodb_format({})
+        assert result == {}
+
+    def test_convert_complex_structure(self):
+        """Testa conversão de estrutura complexa"""
+        data = {
+            'id': 'video123',
+            'count': 10,
+            'price': 29.99,
+            'active': True,
+            'tags': ['tag1', 'tag2'],
+            'metadata': {
+                'title': 'Test Video',
+                'duration': 3600
+            },
+            'optional': None
+        }
+
+        result = dict_to_dynamodb_format(data)
+
+        assert result['id'] == {'S': 'video123'}
+        assert result['count'] == {'N': '10'}
+        assert result['price'] == {'N': '29.99'}
+        assert result['active'] == {'BOOL': True}
+        assert 'L' in result['tags']
+        assert 'M' in result['metadata']
+        assert result['optional'] == {'NULL': True}
+
+    def test_convert_nested_lists(self):
+        """Testa conversão de listas aninhadas"""
+        data = {'matrix': [['a', 'b'], ['c', 'd']]}
+        result = dict_to_dynamodb_format(data)
+
+        assert 'matrix' in result
+        assert 'L' in result['matrix']
+
+    def test_convert_list_with_mixed_types(self):
+        """Testa conversão de lista com tipos mistos"""
+        data = {'mixed': ['string', 123, True, None]}
+        result = dict_to_dynamodb_format(data)
+
+        assert 'mixed' in result
+        assert 'L' in result['mixed']
+        assert len(result['mixed']['L']) == 4
+
+    def test_convert_boolean_false(self):
+        """Testa conversão de boolean False"""
+        result = dict_to_dynamodb_format({'inactive': False})
+        assert result == {'inactive': {'BOOL': False}}
+
+    def test_convert_zero_integer(self):
+        """Testa conversão de inteiro zero"""
+        result = dict_to_dynamodb_format({'count': 0})
+        assert result == {'count': {'N': '0'}}
+
+    def test_convert_negative_number(self):
+        """Testa conversão de número negativo"""
+        result = dict_to_dynamodb_format({'temperature': -10})
+        assert result == {'temperature': {'N': '-10'}}
+
+    def test_convert_deeply_nested_dict(self):
+        """Testa conversão de dicionário profundamente aninhado"""
+        data = {
+            'level1': {
+                'level2': {
+                    'level3': {
+                        'value': 'deep'
+                    }
+                }
+            }
+        }
+        result = dict_to_dynamodb_format(data)
+
+        assert 'M' in result['level1']
+        assert 'M' in result['level1']['M']['level2']
+        assert 'M' in result['level1']['M']['level2']['M']['level3']
+

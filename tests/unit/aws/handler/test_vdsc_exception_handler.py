@@ -78,3 +78,120 @@ class TestVdscExceptionHandler:
 
         assert test_function.__name__ == "test_function"
         assert test_function.__doc__ == "Docstring de teste"
+
+    def test_decorator_with_function_arguments(self, handler):
+        """Testa decorador com função que recebe argumentos"""
+        @handler.vdsc_exception_handler
+        def function_with_args(a, b):
+            return a + b
+
+        result = function_with_args(3, 5)
+        assert result == 8
+
+    def test_decorator_with_keyword_arguments(self, handler):
+        """Testa decorador com função que recebe kwargs"""
+        @handler.vdsc_exception_handler
+        def function_with_kwargs(name, age=25):
+            return f"{name} tem {age} anos"
+
+        result = function_with_kwargs(name="João", age=30)
+        assert result == "João tem 30 anos"
+
+    @patch('src.aws.handler.vdsc_exception_handler.logger')
+    def test_decorator_logs_vdsc_exception(self, mock_logger, handler):
+        """Testa se VdscException é registrada no logger"""
+        @handler.vdsc_exception_handler
+        def function_with_error():
+            raise VdscException("Erro de teste", "ERROR", {})
+
+        with pytest.raises(VdscException):
+            function_with_error()
+
+        mock_logger.error.assert_called_once()
+
+    @patch('src.aws.handler.vdsc_exception_handler.logger')
+    def test_decorator_logs_generic_exception(self, mock_logger, handler):
+        """Testa se exceção genérica é registrada no logger"""
+        @handler.vdsc_exception_handler
+        def function_with_error():
+            raise RuntimeError("Erro de runtime")
+
+        with pytest.raises(RuntimeError):
+            function_with_error()
+
+        mock_logger.error.assert_called_once()
+
+    def test_decorator_with_vdsc_exception_metadata(self, handler):
+        """Testa VdscException com metadados"""
+        metadata = {'videoId': 'video456', 'status': 'FAILED'}
+
+        @handler.vdsc_exception_handler
+        def function_with_metadata():
+            raise VdscException("Erro com metadados", "ERROR", metadata)
+
+        with pytest.raises(VdscException) as exc_info:
+            function_with_metadata()
+
+        assert exc_info.value.message == "Erro com metadados"
+        assert exc_info.value.metadata == metadata
+
+    def test_decorator_reraises_exception(self, handler):
+        """Testa se decorador re-lança a exceção"""
+        @handler.vdsc_exception_handler
+        def function_raises():
+            raise KeyError("Chave não encontrada")
+
+        with pytest.raises(KeyError, match="Chave não encontrada"):
+            function_raises()
+
+    def test_decorator_with_none_return(self, handler):
+        """Testa função decorada que retorna None"""
+        @handler.vdsc_exception_handler
+        def function_returns_none():
+            return None
+
+        result = function_returns_none()
+        assert result is None
+
+    def test_decorator_with_complex_return(self, handler):
+        """Testa função decorada que retorna estrutura complexa"""
+        @handler.vdsc_exception_handler
+        def function_returns_dict():
+            return {
+                'status': 'success',
+                'data': {'items': [1, 2, 3]},
+                'count': 3
+            }
+
+        result = function_returns_dict()
+        assert result['status'] == 'success'
+        assert len(result['data']['items']) == 3
+
+    @patch('builtins.print')
+    def test_vdsc_exception_message_format(self, mock_print, handler):
+        """Testa formato da mensagem de VdscException"""
+        @handler.vdsc_exception_handler
+        def func():
+            raise VdscException("Mensagem de erro específica", "ERROR", {})
+
+        with pytest.raises(VdscException):
+            func()
+
+        call_args = mock_print.call_args[0][0]
+        assert "Erro capturado:" in call_args
+        assert "Mensagem de erro específica" in call_args
+
+    @patch('builtins.print')
+    def test_generic_exception_message_format(self, mock_print, handler):
+        """Testa formato da mensagem de exceção genérica"""
+        @handler.vdsc_exception_handler
+        def func():
+            raise TypeError("Tipo incorreto")
+
+        with pytest.raises(TypeError):
+            func()
+
+        call_args = mock_print.call_args[0][0]
+        assert "Erro inesperado:" in call_args
+        assert "Tipo incorreto" in call_args
+
