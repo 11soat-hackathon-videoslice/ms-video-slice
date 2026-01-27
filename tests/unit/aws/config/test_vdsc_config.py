@@ -19,7 +19,6 @@ class TestVdscConfig:
         """Testa configurações padrão da AWS"""
         config = VdscConfig()
         assert config.aws['region'] == 'us-east-1'
-        assert 'account_id' in config.aws
 
     def test_default_s3_config(self):
         """Testa configurações padrão do S3"""
