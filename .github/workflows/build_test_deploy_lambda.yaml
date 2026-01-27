@@ -171,6 +171,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+          special-characters-workaround: true
+
+      - name: Validar credenciais AWS
+        run: |
+          echo "🔍 Validando configuração AWS..."
+          aws sts get-caller-identity
+          echo "✅ Credenciais AWS configuradas corretamente"
 
       - name: Cache do SAM Build
         uses: actions/cache@v4
