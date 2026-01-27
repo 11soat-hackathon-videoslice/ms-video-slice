@@ -148,8 +148,6 @@ jobs:
     name: Deploy na AWS
     runs-on: ubuntu-latest
     needs: [build-and-test, approval]
-    env:
-      SAM_CLI_TELEMETRY: 0
     if: |
       always() &&
       needs.build-and-test.result == 'success' &&
@@ -183,49 +181,125 @@ jobs:
           aws sts get-caller-identity
           echo "✅ Credenciais AWS configuradas corretamente"
 
-      - name: Cache do SAM Build
-        uses: actions/cache@v4
-        with:
-          path: .aws-sam
-          key: ${{ runner.os }}-sam-${{ hashFiles('**/template.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-sam-
-
-      - name: Instalar AWS SAM CLI
+      - name: Preparar pacote de deploy
         run: |
-          pip install aws-sam-cli
+          echo "📦 Preparando pacote de deploy..."
+          mkdir -p lambda-package
+          
+          if [ -f src/requirements.txt ]; then
+            echo "📥 Instalando dependências Python..."
+            pip install -r src/requirements.txt -t lambda-package/ --quiet
+          fi
+          
+          echo "📋 Copiando código fonte..."
+          cp -r src/* lambda-package/
+          
+          echo "🗜️ Criando arquivo ZIP..."
+          cd lambda-package
+          zip -r ../lambda-deployment-package.zip . -q
+          cd ..
+          
+          PACKAGE_SIZE=$(ls -lh lambda-deployment-package.zip | awk '{print $5}')
+          echo "📊 Tamanho do pacote: ${PACKAGE_SIZE}"
+          echo "✅ Pacote preparado com sucesso"
 
-      - name: Build do SAM
+      - name: Deploy via AWS CLI
         run: |
-          sam build --cached --parallel
-
-      - name: Deploy do SAM
-        run: |
-          sam deploy \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
-            --stack-name vdsc-stack-ms-video-slice \
-            --capabilities CAPABILITY_NAMED_IAM \
+          echo "🚀 Iniciando deploy da Lambda via AWS CLI..."
+          TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
+          FUNCTION_NAME="vdsc-prd-lmb-video-slice"
+          
+          echo "📤 Atualizando código da função Lambda..."
+          aws lambda update-function-code \
+            --function-name ${FUNCTION_NAME} \
+            --zip-file fileb://lambda-deployment-package.zip \
             --region ${{ env.AWS_REGION }} \
-            --resolve-s3 \
-            --parameter-overrides \
-              AwsRegion=${{ env.AWS_REGION }} \
-              AwsAccountId=${{ env.AWS_ACCOUNT_ID }} \
-              S3BucketName=${{ env.S3_BUCKET_NAME }} \
-              S3BucketDirUploads=${{ env.S3_BUCKET_DIR_UPLOADS }} \
-              S3BucketDirFinished=${{ env.S3_BUCKET_DIR_FINISHED }} \
-              S3BucketDirProcessing=${{ env.S3_BUCKET_DIR_PROCESSING }} \
-              EventBusName=${{ env.EVENT_BUS_NAME }} \
-              DynamoDbTableName=${{ env.DYNAMODB_TABLE_NAME }} \
-              DynamoDbStreamArn=${{ env.DYNAMODB_STREAM_ARN }} \
-              VdscPngCompressionLevel=${{ env.VDSC_PNG_COMPRESSION_LEVEL }} \
-              VdscZipCompressionLevel=${{ env.VDSC_ZIP_COMPRESSION_LEVEL }} \
-              VdscQuality="${{ env.VDSC_QUALITY }}"
-
-      - name: Obter informações da stack
-        run: |
-          aws cloudformation describe-stacks \
-            --stack-name ms-video-slice \
+            --no-cli-pager
+          
+          echo "⏳ Aguardando conclusão da atualização do código..."
+          aws lambda wait function-updated \
+            --function-name ${FUNCTION_NAME} \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ Código atualizado com sucesso às ${TIMESTAMP}"
+          
+          echo ""
+          echo "⚙️ Atualizando configurações da Lambda..."
+          aws lambda update-function-configuration \
+            --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
-            --query 'Stacks[0].Outputs' \
-            --output table
+            --environment "Variables={AWS_REGION=${{ env.AWS_REGION }},S3_BUCKET_NAME=${{ env.S3_BUCKET_NAME }},S3_BUCKET_DIR_UPLOADS=${{ env.S3_BUCKET_DIR_UPLOADS }},S3_BUCKET_DIR_FINISHED=${{ env.S3_BUCKET_DIR_FINISHED }},S3_BUCKET_DIR_PROCESSING=${{ env.S3_BUCKET_DIR_PROCESSING }},EVENT_BUS_NAME=${{ env.EVENT_BUS_NAME }},DYNAMODB_TABLE_NAME=${{ env.DYNAMODB_TABLE_NAME }},VDSC_PNG_COMPRESSION_LEVEL=${{ env.VDSC_PNG_COMPRESSION_LEVEL }},VDSC_ZIP_COMPRESSION_LEVEL=${{ env.VDSC_ZIP_COMPRESSION_LEVEL }},VDSC_QUALITY=${{ env.VDSC_QUALITY }}}" \
+            --no-cli-pager
+          
+          echo "⏳ Aguardando conclusão da atualização de configuração..."
+          aws lambda wait function-updated \
+            --function-name ${FUNCTION_NAME} \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ Configurações atualizadas com sucesso"
+          echo ""
+          echo "🎉 Deploy concluído com sucesso às ${TIMESTAMP}"
+
+      - name: Configurar Event Source Mapping do DynamoDB
+        run: |
+          echo "🔗 Configurando Event Source Mapping do DynamoDB..."
+          FUNCTION_NAME="vdsc-prd-lmb-video-slice"
+          
+          if [ -z "${{ env.DYNAMODB_STREAM_ARN }}" ]; then
+            echo "⚠️ DYNAMODB_STREAM_ARN não configurado. Pulando configuração."
+            exit 0
+          fi
+          
+          echo "🔍 Verificando Event Source Mapping existente..."
+          MAPPING_UUID=$(aws lambda list-event-source-mappings \
+            --function-name ${FUNCTION_NAME} \
+            --region ${{ env.AWS_REGION }} \
+            --query "EventSourceMappings[?EventSourceArn=='${{ env.DYNAMODB_STREAM_ARN }}'].UUID" \
+            --output text \
+            --no-cli-pager)
+          
+          if [ -n "$MAPPING_UUID" ] && [ "$MAPPING_UUID" != "None" ]; then
+            echo "✅ Event Source Mapping encontrado: ${MAPPING_UUID}"
+            echo "🔄 Atualizando configuração..."
+            
+            aws lambda update-event-source-mapping \
+              --uuid ${MAPPING_UUID} \
+              --region ${{ env.AWS_REGION }} \
+              --batch-size 1 \
+              --maximum-batching-window-in-seconds 0 \
+              --enabled \
+              --no-cli-pager
+            
+            echo "✅ Event Source Mapping atualizado"
+          else
+            echo "➕ Criando novo Event Source Mapping..."
+            
+            aws lambda create-event-source-mapping \
+              --function-name ${FUNCTION_NAME} \
+              --event-source-arn ${{ env.DYNAMODB_STREAM_ARN }} \
+              --starting-position LATEST \
+              --batch-size 1 \
+              --maximum-batching-window-in-seconds 0 \
+              --parallelization-factor 1 \
+              --enabled \
+              --filter-criteria 'Filters=[{Pattern="{\"eventName\":[\"INSERT\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"UPLOADED\"]}}}}"}},{Pattern="{\"eventName\":[\"MODIFY\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"RETRYING\"]}}}}"}]' \
+              --region ${{ env.AWS_REGION }} \
+              --no-cli-pager
+            
+            echo "✅ Event Source Mapping criado com sucesso"
+          fi
+
+      - name: Verificar status da função Lambda
+        run: |
+          echo "📋 Informações da função Lambda após deploy:"
+          FUNCTION_NAME="vdsc-prd-lmb-video-slice"
+          
+          aws lambda get-function \
+            --function-name ${FUNCTION_NAME} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Configuration.[FunctionName,Runtime,LastModified,State,Version,CodeSize,MemorySize,Timeout]' \
+            --output table \
+            --no-cli-pager
+          
+          echo ""
+          echo "✅ Deploy finalizado com sucesso"
