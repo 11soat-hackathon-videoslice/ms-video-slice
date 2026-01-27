@@ -68,3 +68,70 @@ class TestLogEntry:
         # Timestamps devem ser strings
         assert isinstance(log1.timestamp, str)
         assert isinstance(log2.timestamp, str)
+
+    def test_create_log_entry_with_custom_timestamp(self):
+        """Testa criação de LogEntry com timestamp customizado"""
+        custom_time = datetime(2026, 1, 27, 10, 30, 45, tzinfo=UTC)
+        log = LogEntry(info="Log customizado", timestamp=custom_time)
+
+        assert log.info == "Log customizado"
+        assert log.timestamp == "2026-01-27 10:30:45"
+
+    def test_from_dict_without_timestamp(self):
+        """Testa criação de LogEntry a partir de dicionário sem timestamp"""
+        data = {'info': 'Log sem timestamp definido'}
+        log = LogEntry.from_dict(data)
+
+        assert log.info == 'Log sem timestamp definido'
+        assert log.timestamp is not None
+        assert isinstance(log.timestamp, str)
+
+    def test_log_entry_with_empty_info(self):
+        """Testa LogEntry com informação vazia"""
+        log = LogEntry(info="")
+
+        assert log.info == ""
+        assert log.timestamp is not None
+
+    def test_log_entry_with_special_characters(self):
+        """Testa LogEntry com caracteres especiais em português"""
+        info = "Vídeo processado com sucesso: áéíóúãõç"
+        log = LogEntry(info=info)
+
+        assert log.info == info
+        result = log.to_dict()
+        assert result['info'] == info
+
+    def test_log_entry_roundtrip_conversion(self):
+        """Testa conversão completa: LogEntry -> dict -> LogEntry"""
+        original_time = datetime(2026, 1, 27, 15, 20, 30, tzinfo=UTC)
+        original_log = LogEntry(info="Roundtrip test", timestamp=original_time)
+
+        # Converte para dict
+        log_dict = original_log.to_dict()
+
+        # Converte de volta para LogEntry
+        reconstructed_log = LogEntry.from_dict(log_dict)
+
+        assert reconstructed_log.info == original_log.info
+        assert reconstructed_log.timestamp == original_log.timestamp
+
+    def test_from_dict_with_z_suffix_uppercase(self):
+        """Testa parsing de timestamp com Z maiúsculo"""
+        data = {
+            'timestamp': '2026-01-27T12:30:00Z',
+            'info': 'Teste com Z'
+        }
+        log = LogEntry.from_dict(data)
+
+        assert log.info == 'Teste com Z'
+        assert 'Z' not in log.timestamp
+
+    def test_log_entry_with_long_info(self):
+        """Testa LogEntry com informação longa"""
+        long_info = "Este é um log muito longo " * 50
+        log = LogEntry(info=long_info)
+
+        assert log.info == long_info
+        assert len(log.info) > 1000
+

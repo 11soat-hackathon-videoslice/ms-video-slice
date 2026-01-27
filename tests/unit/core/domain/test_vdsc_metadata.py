@@ -2,7 +2,6 @@
 import pytest
 from datetime import datetime, UTC
 from src.core.domain.vdsc_metadata import VdscMetadata
-from src.core.domain.log_entry import LogEntry
 from src.core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from src.core.enums.vdsc_status_enum import VdscStatusEnum
 
@@ -138,3 +137,225 @@ class TestVdscMetadata:
         metadata.mark_as_finished()
         assert metadata.status == VdscStatusEnum.FINISHED.value
         assert len(metadata.logs) > 0
+
+    def test_mark_as_retrying(self, valid_dto):
+        """Testa marcação como retrying"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_retrying()
+        assert metadata.status == VdscStatusEnum.RETRYING.value
+        assert len(metadata.logs) > 0
+
+    def test_mark_as_failed(self, valid_dto):
+        """Testa marcação como failed"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_failed()
+        assert metadata.status == VdscStatusEnum.FAILED.value
+        assert len(metadata.logs) > 0
+
+    def test_mark_as_failed_with_error_message(self, valid_dto):
+        """Testa marcação como failed com mensagem de erro"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_failed("Connection timeout")
+        assert metadata.status == VdscStatusEnum.FAILED.value
+        assert any("Connection timeout" in log.info for log in metadata.logs)
+
+    def test_increment_retry_success(self, valid_dto):
+        """Testa incremento de retry com sucesso"""
+        metadata = VdscMetadata(dto=valid_dto)
+        result = metadata.increment_retry()
+        assert result is True
+        assert metadata.retries == 1
+        assert len(metadata.logs) > 0
+
+    def test_increment_retry_max_reached(self, valid_dto):
+        """Testa incremento de retry quando máximo já foi atingido"""
+        valid_dto.retries = 3
+        metadata = VdscMetadata(dto=valid_dto)
+        result = metadata.increment_retry()
+        assert result is False
+        assert metadata.retries == 3
+
+    def test_can_retry_true(self, valid_dto):
+        """Testa can_retry retornando True"""
+        metadata = VdscMetadata(dto=valid_dto)
+        assert metadata.can_retry() is True
+
+    def test_can_retry_false(self, valid_dto):
+        """Testa can_retry retornando False"""
+        valid_dto.retries = 3
+        metadata = VdscMetadata(dto=valid_dto)
+        assert metadata.can_retry() is False
+
+    def test_get_duration(self, valid_dto):
+        """Testa cálculo de duração"""
+        valid_dto.start_time = 10
+        valid_dto.end_time = 70
+        metadata = VdscMetadata(dto=valid_dto)
+        assert metadata.get_duration() == 60
+
+    def test_get_full_file_name(self, valid_dto):
+        """Testa obtenção do nome completo do arquivo"""
+        metadata = VdscMetadata(dto=valid_dto)
+        assert metadata.get_full_file_name() == "test_video.mp4.mp4"
+
+    def test_to_dict(self, valid_dto):
+        """Testa conversão para dicionário"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.add_log("Test log")
+        result = metadata.to_dict()
+
+        assert result['videoId'] == 'video123'
+        assert result['fileName'] == 'test_video.mp4'
+        assert result['status'] == 'UPLOADED'
+        assert len(result['logs']) == 1
+
+    def test_add_log_with_custom_timestamp(self, valid_dto):
+        """Testa adição de log com timestamp customizado"""
+        metadata = VdscMetadata(dto=valid_dto)
+        custom_time = datetime(2026, 1, 27, 10, 30, 0, tzinfo=UTC)
+        metadata.add_log("Custom timestamp log", timestamp=custom_time)
+
+        assert len(metadata.logs) == 1
+        assert metadata.logs[0].info == "Custom timestamp log"
+
+    def test_validate_empty_file_name(self, valid_dto):
+        """Testa validação com file_name vazio"""
+        valid_dto.file_name = ""
+        metadata = VdscMetadata(dto=valid_dto)
+        with pytest.raises(ValueError, match="Nome do arquivo é obrigatório"):
+            metadata.validate()
+
+    def test_validate_empty_extension_file(self, valid_dto):
+        """Testa validação com extension_file vazio"""
+        valid_dto.extension_file = ""
+        metadata = VdscMetadata(dto=valid_dto)
+        with pytest.raises(ValueError, match="Extensão do arquivo é obrigatória"):
+            metadata.validate()
+
+    def test_validate_negative_total_time(self, valid_dto):
+        """Testa validação com total_time negativo"""
+        valid_dto.total_time = -100
+        metadata = VdscMetadata(dto=valid_dto)
+        with pytest.raises(ValueError, match="Tempo total deve ser maior que zero"):
+            metadata.validate()
+
+    def test_validate_negative_max_retry(self, valid_dto):
+        """Testa validação com max_retry negativo"""
+        valid_dto.max_retry = -1
+        metadata = VdscMetadata(dto=valid_dto)
+        with pytest.raises(ValueError, match="Número máximo de tentativas não pode ser negativo"):
+            metadata.validate()
+
+    def test_validate_negative_retries(self, valid_dto):
+        """Testa validação com retries negativo"""
+        valid_dto.retries = -1
+        metadata = VdscMetadata(dto=valid_dto)
+        with pytest.raises(ValueError, match="Número de tentativas não pode ser negativo"):
+            metadata.validate()
+
+    def test_validate_invalid_status(self, valid_dto):
+        """Testa validação com status inválido"""
+        valid_dto.status = "INVALID_STATUS"
+        metadata = VdscMetadata(dto=valid_dto)
+        with pytest.raises(ValueError, match="Status deve ser um dos seguintes"):
+            metadata.validate()
+
+    def test_validate_valid_unit_times(self, valid_dto):
+        """Testa validação com todas as unit_time válidas"""
+        valid_units = ["s", "ms", "m", "h"]
+        for unit in valid_units:
+            valid_dto.unit_time = unit
+            metadata = VdscMetadata(dto=valid_dto)
+            assert metadata.validate() is True
+
+    def test_multiple_increment_retry(self, valid_dto):
+        """Testa múltiplos incrementos de retry"""
+        metadata = VdscMetadata(dto=valid_dto)
+
+        assert metadata.increment_retry() is True
+        assert metadata.retries == 1
+
+        assert metadata.increment_retry() is True
+        assert metadata.retries == 2
+
+        assert metadata.increment_retry() is True
+        assert metadata.retries == 3
+
+        assert metadata.increment_retry() is False
+        assert metadata.retries == 3
+
+    def test_status_workflow(self, valid_dto):
+        """Testa fluxo completo de mudanças de status"""
+        metadata = VdscMetadata(dto=valid_dto)
+
+        metadata.mark_as_uploaded()
+        assert metadata.status == VdscStatusEnum.UPLOADED.value
+
+        metadata.mark_as_processing()
+        assert metadata.status == VdscStatusEnum.PROCESSING.value
+
+        metadata.mark_as_finished()
+        assert metadata.status == VdscStatusEnum.FINISHED.value
+
+        assert len(metadata.logs) == 3
+
+    def test_retry_workflow(self, valid_dto):
+        """Testa fluxo de retry"""
+        metadata = VdscMetadata(dto=valid_dto)
+
+        metadata.mark_as_processing()
+        metadata.mark_as_failed("First failure")
+        metadata.mark_as_retrying()
+        metadata.increment_retry()
+
+        assert metadata.retries == 1
+        assert metadata.status == VdscStatusEnum.RETRYING.value
+        assert metadata.can_retry() is True
+
+    def test_created_datetime_conversion(self, valid_dto):
+        """Testa conversão de created para datetime"""
+        metadata = VdscMetadata(dto=valid_dto)
+        assert isinstance(metadata.created, datetime)
+
+    def test_created_as_datetime_object(self):
+        """Testa criação com created já como datetime"""
+        dto = VdscMetadataDTO(
+            video_id="video456",
+            file_name="test.mp4",
+            extension_file="mp4",
+            status="UPLOADED",
+            created=datetime.now(UTC),
+            user_id="user456",
+            total_time=3600,
+            unit_time="s",
+            start_time=0,
+            end_time=60,
+            time_interval=["00:00:00"],
+            max_retry=3,
+            retries=0,
+            quality="high",
+            logs=[]
+        )
+
+        metadata = VdscMetadata(dto=dto)
+        assert isinstance(metadata.created, datetime)
+
+    def test_to_dict_with_multiple_logs(self, valid_dto):
+        """Testa conversão para dict com múltiplos logs"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.add_log("Log 1")
+        metadata.add_log("Log 2")
+        metadata.add_log("Log 3")
+
+        result = metadata.to_dict()
+        assert len(result['logs']) == 3
+
+    def test_repr_string(self, valid_dto):
+        """Testa representação string do objeto"""
+        metadata = VdscMetadata(dto=valid_dto)
+        repr_str = repr(metadata)
+
+        assert "VideoSliceMetadata" in repr_str
+        assert "video123" in repr_str
+        assert "test_video.mp4" in repr_str
+
