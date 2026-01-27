@@ -72,16 +72,20 @@ jobs:
           if [ -f coverage.xml ]; then
             echo "✅ coverage.xml encontrado"
             echo "📋 Conteúdo antes da correção:"
-            head -20 coverage.xml
+            head -30 coverage.xml
             
             echo ""
             echo "🔧 Corrigindo caminhos absolutos no coverage.xml..."
-            sed -i "s|<source>/home/runner/work/f5/f5/ms-video-slice</source>|<source>/github/workspace</source>|g" coverage.xml
-            sed -i "s|/home/runner/work/f5/f5/ms-video-slice/||g" coverage.xml
+            # Remover completamente a seção <sources>...</sources>
+            sed -i '/<sources>/,/<\/sources>/d' coverage.xml
+            # Adicionar prefixo src/ aos filenames que não começam com src/
+            sed -i 's|filename="|filename="src/|g' coverage.xml
+            # Corrigir casos onde src/ foi duplicado
+            sed -i 's|filename="src/src/|filename="src/|g' coverage.xml
             
             echo ""
             echo "📋 Conteúdo após a correção:"
-            head -20 coverage.xml
+            head -30 coverage.xml
           else
             echo "❌ coverage.xml NÃO encontrado"
             exit 1
