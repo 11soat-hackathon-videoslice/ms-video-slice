@@ -1,4 +1,7 @@
+import json
 import os
+
+quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'))
 
 class VdscConfig:
     _instance = None
@@ -32,5 +35,6 @@ class VdscConfig:
         self.vdsc = {
             'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
             'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
-            'quality':os.getenv('VDSC_QUALITY', "{'ultra': 1080, 'high': 720, 'medium': 480, 'low': 360}")
+            'quality':quality
         }
+
