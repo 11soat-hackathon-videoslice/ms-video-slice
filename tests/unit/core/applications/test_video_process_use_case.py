@@ -105,7 +105,7 @@ class TestVdscProcessUseCase:
     def test_get_recurrent_time_intervals(self, use_case):
         """Testa geração de intervalos recorrentes"""
         result = use_case._get_recurrent_time_intervals(0, 30, 10)
-        assert result == [0, 10, 20]
+        assert result == [0, 10, 20, 30]
 
     def test_metadata_update_status(self, use_case, valid_event_dto):
         """Testa atualização de status de metadados"""
@@ -159,18 +159,19 @@ class TestVdscProcessUseCase:
         import numpy as np
         frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
-        result = use_case._get_target_frame_width(frame, 720)
+        result,original = use_case._get_frame_widths(frame, 720)
 
         assert result == 1280
+        assert original == 1920
 
     def test_get_target_frame_width_no_resize_needed(self, use_case):
         """Testa quando frame já está no tamanho correto"""
         import numpy as np
-        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
-        result = use_case._get_target_frame_width(frame, 720)
+        result, original = use_case._get_frame_widths(frame, 1080)
 
-        assert result is None
+        assert result == original
 
     def test_frame_resize(self, use_case):
         """Testa redimensionamento de frame"""
@@ -201,7 +202,7 @@ class TestVdscProcessUseCase:
 
         result = use_case._create_interval_list(metadata, 1000)
 
-        assert result == [0, 5000, 10000, 15000]
+        assert result == [0, 5000, 10000, 15000, 20000]
 
     def test_create_interval_list_specific(self, use_case, valid_event_dto):
         """Testa criação de lista de intervalos específicos"""
@@ -234,6 +235,7 @@ class TestVdscProcessUseCase:
         mock_cap.read.return_value = (True, np.zeros((1080, 1920, 3), dtype=np.uint8))
 
         metadata = VdscMetadata(dto=valid_event_dto)
+        metadata.unit_time = "s"
         metadata.time_interval = [1]
         metadata.start_time = 0
         metadata.end_time = 5
