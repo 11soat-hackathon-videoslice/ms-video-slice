@@ -243,7 +243,7 @@ jobs:
           # Se o pacote for maior que 50MB, fazer upload para S3 primeiro
           if [ ${PACKAGE_SIZE_BYTES} -gt 52428800 ]; then
             echo "⚠️ Pacote maior que 50MB, fazendo upload para S3..."
-            S3_KEY="lambda-build-and-deployments/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
+            S3_KEY="deploy/lambda/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
             
             aws s3 cp lambda-build-and-deployment-package.zip \
               s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY} \
@@ -256,6 +256,7 @@ jobs:
             
             aws lambda update-function-code \
               --function-name ${FUNCTION_NAME} \
+              --s3-bucket ${{ env.S3_BUCKET_NAME }}
               --s3-key ${S3_KEY} \
               --region ${{ env.AWS_REGION }} \
               --no-cli-pager
