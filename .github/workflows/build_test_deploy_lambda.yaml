@@ -272,7 +272,7 @@ jobs:
           echo "📋 Variáveis de ambiente a serem configuradas:"
           echo $PWD
           ls -ltra 
-          ENV_VARIABLES="resources/aws/env_variables.json"
+          ENV_VARIABLES="src/resources/aws/env_variables.json"
           cat $ENV_VARIABLES
           
           aws lambda update-function-configuration \
@@ -282,9 +282,6 @@ jobs:
             --runtime python${{ env.PYTHON_VERSION }} \
             --architectures "x86_64" \
             --no-cli-pager
-          
-          # Limpar arquivo temporário
-          rm -f env-vars.json
           
           echo "⏳ Aguardando conclusão da atualização de configuração..."
           aws lambda wait function-updated \
@@ -330,7 +327,7 @@ jobs:
             echo "➕ Criando novo Event Source Mapping..."
             
             echo "📋 Filtros a serem aplicados:"
-            DYNAMO_FILTERS="resources/aws/dynamodb_stream_filters.json"
+            DYNAMO_FILTERS="src/resources/aws/dynamodb_stream_filters.json"
             cat $DYNAMO_FILTERS
             
             aws lambda create-event-source-mapping \
@@ -344,9 +341,6 @@ jobs:
               --filter-criteria file://filter-criteria.json \
               --region ${{ env.AWS_REGION }} \
               --no-cli-pager
-            
-            # Limpar arquivo temporário
-            rm -f filter-criteria.json
             
             echo "✅ Event Source Mapping criado com sucesso"
           fi
