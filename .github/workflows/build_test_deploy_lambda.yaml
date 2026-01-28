@@ -186,11 +186,11 @@ jobs:
           echo "📦 Preparando pacote de deploy..."
           mkdir -p lambda-package
           
-          if [ -f src/requirements.txt ]; then
+          if [ -f src/requirements-lambda.txt ]; then
             echo "📥 Instalando dependências Python de produção..."
-            pip install -r src/requeriments.txt -t lambda-package/ --quiet --no-cache-dir
+            pip install -r src/requirements-lambda.txt -t lambda-package/ --quiet --no-cache-dir
           elif [ -f src/requirements.txt ]; then
-            echo "⚠️ Usando requirements.txt (considere criar requeriments.txt)"
+            echo "⚠️ Usando requirements.txt (considere criar requirements-lambda.txt)"
             pip install -r src/requirements.txt -t lambda-package/ --quiet --no-cache-dir
           fi
           
@@ -226,6 +226,8 @@ jobs:
           PACKAGE_SIZE=$(ls -lh lambda-deployment-package.zip | awk '{print $5}')
           echo "📊 Tamanho do pacote final: ${PACKAGE_SIZE}"
           echo "✅ Pacote preparado com sucesso"
+        env:
+          PYTHON_REQUIRIMENTS: ${{ github.workspace }}/src/requirements.txt || {{vars.PYTHON_REQUIRIMENTS}}
 
       - name: Deploy via AWS CLI
         run: |

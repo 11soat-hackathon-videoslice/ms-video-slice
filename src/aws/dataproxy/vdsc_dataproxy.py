@@ -1,8 +1,8 @@
-from ...core.interfaces.vdsc_dataproxy_interface import VdscDataProxyInterface
-from ...core.dtos.vdsc_metadata_dto import VdscMetadataDTO
-from ..datasources.database.dynamodb_interface import DynamoDBInterface
-from ..datasources.storage.s3_interface import S3Interface
-from ..datasources.producer.event_producer_interface import EventProducerInterface
+from core.interfaces.vdsc_dataproxy_interface import VdscDataProxyInterface
+from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
+from datasources.database.dynamodb_interface import DynamoDBInterface
+from datasources.storage.s3_interface import S3Interface
+from datasources.producer.event_producer_interface import EventProducerInterface
 
 class VdscDataProxy(VdscDataProxyInterface):
 

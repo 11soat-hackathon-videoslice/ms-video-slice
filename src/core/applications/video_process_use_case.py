@@ -26,6 +26,8 @@ class VdscProcessUseCase:
 
         #Construindo entidade de domínio a partir do DTO
         vdsc_metadata = VdscMetadata(dto=event)
+
+        #Mapeamento de variáveis
         video_id = vdsc_metadata.video_id
         retries = vdsc_metadata.retries
         max_retries = vdsc_metadata.max_retry
@@ -109,7 +111,7 @@ class VdscProcessUseCase:
         time_interval_list = []
 
         if len(vdsc_metadata.time_interval) == 1 and time_unit_multiplier !=1:
-            interval = vdsc_metadata.time_interval[0]
+            interval = int(vdsc_metadata.time_interval[0] * time_unit_multiplier)
             time_interval_list = self._get_recurrent_time_intervals(start_time, end_time, interval, time_unit_multiplier)
         else:
             time_interval_list = self._get_specific_time_intervals(vdsc_metadata.time_interval, time_unit_multiplier)
