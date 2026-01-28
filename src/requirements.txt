@@ -1,10 +1,8 @@
 pytest
 pytest-cov
 pytest-mock
-boto3
 moto
 requests
-opencv-python-headless==4.8.1.78
-Pillow==10.0.0
-numpy==1.24.3
-boto3==1.28.85
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+numpy==1.26.4
