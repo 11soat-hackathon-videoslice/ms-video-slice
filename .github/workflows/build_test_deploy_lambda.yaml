@@ -45,8 +45,7 @@ jobs:
   tests-and-coverage:
     name: Testes e Quality Gate
     runs-on: ubuntu-latest
-    if: github.event.inputs.deploy_only == 'false' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
-
+    if: (github.event.inputs.deploy_only == 'false' &&  github.event_name == 'workflow_dispatch') || (github.event_name == 'push' || github.event_name == 'pull_request')
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
