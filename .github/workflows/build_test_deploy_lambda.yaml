@@ -45,6 +45,7 @@ jobs:
   tests-and-coverage:
     name: Testes e Quality Gate
     runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_only == 'false'
 
     steps:
       - name: Checkout do código
