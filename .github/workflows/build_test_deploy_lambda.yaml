@@ -42,6 +42,7 @@ env:
   VDSC_QUALITY: ${{ vars.VDSC_QUALITY }}
   VDSC_MAX_WORKERS: ${{ vars.VDSC_MAX_WORKERS }}
   VDSC_MAX_TIMEOUT: ${{ vars.VDSC_MAX_TIMEOUT }}
+  AWS_LAMBDA_LOG_LEVEL: ${{ vars.AWS_LAMBDA_LOG_LEVEL }}
 
 jobs:
   tests-and-coverage:
@@ -294,7 +295,8 @@ jobs:
             --arg mpl_config "/tmp/matplotlib" \
             --arg max_workers "${{ env.VDSC_MAX_WORKERS }}" \
             --arg max_timeout "${{ env.VDSC_MAX_TIMEOUT }}" \
-            '{Variables: {S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality, MPLCONFIGDIR: $mpl_config, VDSC_MAX_WORKERS: $max_workers, VDSC_MAX_TIMEOUT: $max_timeout}}' \
+            --arg log_level "${{ env.AWS_LAMBDA_LOG_LEVEL }}" \
+            '{Variables: {S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality, MPLCONFIGDIR: $mpl_config, VDSC_MAX_WORKERS: $max_workers, VDSC_MAX_TIMEOUT: $max_timeout, AWS_LAMBDA_LOG_LEVEL: $log_level}}' \
             > env-vars.json
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
@@ -331,22 +333,9 @@ jobs:
             exit 0
           fi
           
-          # Publicar nova versão da Lambda para obter ARN qualificado (necessário para durable functions)
-          echo "📦 Publicando nova versão da Lambda..."
-          VERSION_OUTPUT=$(aws lambda publish-version \
-            --function-name ${FUNCTION_NAME} \
-            --region ${{ env.AWS_REGION }} \
-            --no-cli-pager)
-          
-          VERSION_NUMBER=$(echo $VERSION_OUTPUT | jq -r '.Version')
-          FUNCTION_ARN=$(echo $VERSION_OUTPUT | jq -r '.FunctionArn')
-          
-          echo "✅ Versão publicada: ${VERSION_NUMBER}"
-          echo "📋 ARN qualificado: ${FUNCTION_ARN}"
-          
           echo "🔍 Verificando Event Source Mapping existente..."
           MAPPING_UUID=$(aws lambda list-event-source-mappings \
-            --function-name ${FUNCTION_ARN} \
+            --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
             --query "EventSourceMappings[?EventSourceArn=='${{ env.DYNAMODB_STREAM_ARN }}'].UUID" \
             --output text \
@@ -383,9 +372,9 @@ jobs:
             echo "📋 Filtros a serem aplicados:"
             cat filter_criteria.json
             
-            # Usar ARN qualificado (com versão) para durable functions
+            # Usar $LATEST para manter a Lambda sempre na última versão
             aws lambda create-event-source-mapping \
-              --function-name ${FUNCTION_ARN} \
+              --function-name ${FUNCTION_NAME} \
               --event-source-arn ${{ env.DYNAMODB_STREAM_ARN }} \
               --starting-position LATEST \
               --batch-size 1 \
@@ -402,6 +391,56 @@ jobs:
             echo "✅ Event Source Mapping criado com sucesso"
           fi
 
+      - name: Configurar Alias PRD apontando para $LATEST
+        run: |
+          echo "🏷️ Configurando alias PRD para apontar para \$LATEST..."
+          FUNCTION_NAME="vdsc-prd-lmb-video-slice"
+          
+          # Verificar se o alias PRD já existe
+          echo "🔍 Verificando se alias PRD existe..."
+          ALIAS_EXISTS=$(aws lambda get-alias \
+            --function-name ${FUNCTION_NAME} \
+            --name PRD \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Name' \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+          
+          if [ "$ALIAS_EXISTS" = "PRD" ]; then
+            echo "✅ Alias PRD encontrado, atualizando para apontar para \$LATEST..."
+            
+            aws lambda update-alias \
+              --function-name ${FUNCTION_NAME} \
+              --name PRD \
+              --function-version \$LATEST \
+              --region ${{ env.AWS_REGION }} \
+              --no-cli-pager
+            
+            echo "✅ Alias PRD atualizado para \$LATEST"
+          else
+            echo "➕ Alias PRD não encontrado, criando novo alias apontando para \$LATEST..."
+            
+            aws lambda create-alias \
+              --function-name ${FUNCTION_NAME} \
+              --name PRD \
+              --function-version \$LATEST \
+              --description "Alias de produção apontando para a versão \$LATEST" \
+              --region ${{ env.AWS_REGION }} \
+              --no-cli-pager
+            
+            echo "✅ Alias PRD criado e apontando para \$LATEST"
+          fi
+          
+          # Verificar configuração final do alias
+          echo ""
+          echo "📋 Configuração final do alias PRD:"
+          aws lambda get-alias \
+            --function-name ${FUNCTION_NAME} \
+            --name PRD \
+            --region ${{ env.AWS_REGION }} \
+            --query '{Name:Name, FunctionVersion:FunctionVersion, Description:Description}' \
+            --output table \
+            --no-cli-pager
+
       - name: Verificar status da função Lambda
         run: |
           echo "📋 Informações da função Lambda após build-and-deploy:"
@@ -415,4 +454,5 @@ jobs:
             --no-cli-pager
           
           echo ""
+          echo "🏷️ Alias PRD configurado e apontando para \$LATEST"
           echo "✅ Deploy finalizado com sucesso"
