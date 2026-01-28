@@ -281,7 +281,6 @@ jobs:
           
           # Criar arquivo JSON com as variáveis de ambiente usando jq
           jq -n \
-            --arg aws_region "${{ env.AWS_REGION }}" \
             --arg s3_bucket "${{ env.S3_BUCKET_NAME }}" \
             --arg s3_uploads "${{ env.S3_BUCKET_DIR_UPLOADS }}" \
             --arg s3_finished "${{ env.S3_BUCKET_DIR_FINISHED }}" \
@@ -291,7 +290,7 @@ jobs:
             --arg png_compression "${{ env.VDSC_PNG_COMPRESSION_LEVEL }}" \
             --arg zip_compression "${{ env.VDSC_ZIP_COMPRESSION_LEVEL }}" \
             --arg quality "${{ env.VDSC_QUALITY }}" \
-            '{Variables: {AWS_REGION: $aws_region, S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality}}' \
+            '{Variables: { S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality}}' \
             > env-vars.json
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
