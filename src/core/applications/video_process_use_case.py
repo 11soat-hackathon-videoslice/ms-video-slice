@@ -108,12 +108,11 @@ class VdscProcessUseCase:
         logger.info(f"start_time: {start_time}")
         end_time = int(vdsc_metadata.end_time * time_unit_multiplier)
         logger.info(f"end_time: {end_time}")
-        interval = int(vdsc_metadata.time_interval[0] * time_unit_multiplier)
+        interval = int(vdsc_metadata.time_interval[0]) * int(time_unit_multiplier)
         logger.info(f"interval: {interval}")
 
         if len(vdsc_metadata.time_interval) == 1:
             time_interval_list = self._get_recurrent_time_intervals(start_time, end_time, interval)
-
         else:
             time_interval_list = self._get_specific_time_intervals(vdsc_metadata.time_interval, int(time_unit_multiplier))
         return time_interval_list
@@ -166,6 +165,7 @@ class VdscProcessUseCase:
         return f"{config.s3_bucket[dir_key]}{video_id}/"
 
     def _get_recurrent_time_intervals(self, start_time: int, end_time: int, interval: int):
+        logger.info("Gerando intervalos de tempo recorrentes")
         current_time = start_time
         time_interval_list = []
         while current_time <= end_time:
@@ -176,7 +176,8 @@ class VdscProcessUseCase:
 
     def _get_specific_time_intervals(self, time_intervals, multiplier: int) -> list[int]:
         """Converte intervalos de tempo específicos para milissegundos"""
-        return [int(time) * multiplier for time in time_intervals]
+        logger.info("Convertendo intervalos de tempo específicos para milissegundos")
+        return [int(time) * int(multiplier) for time in time_intervals]
 
     def _get_frame_widths(self, frame, target_height: int):
         original_height, original_width = frame.shape[:2]

@@ -55,7 +55,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'details': [str(e) for e in errors]
                 })
             }
-
+        logger.info("Processamento concluído com sucesso para todos os vídeos")
         return {'statusCode': 200, 'body': json.dumps({'message': f'Processamento concluído com sucesso para {len(results)} vídeo(s)'})}
 
     except asyncio.TimeoutError:
