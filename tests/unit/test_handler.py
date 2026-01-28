@@ -1,8 +1,8 @@
 """Testes unitários para vdsc_process_handler"""
 import pytest
 import json
-from unittest.mock import Mock, patch, MagicMock
-from src.aws.handler.vdsc_process_handler import lambda_handler
+from unittest.mock import Mock, patch
+from lambda_handler import lambda_handler
 
 
 @pytest.mark.unit

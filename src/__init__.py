@@ -1,5 +1,5 @@
 # Handler Lambda
-from .aws.handler.vdsc_process_handler import lambda_handler
+from lambda_handler import lambda_handler
 from .aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 # Configurações

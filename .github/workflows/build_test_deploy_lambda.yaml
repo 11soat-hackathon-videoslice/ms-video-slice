@@ -300,7 +300,7 @@ jobs:
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
             --environment file://env-vars.json \
-            --handler aws.handler.vdsc_process_handler.lambda_handler \
+            --handler vdsc_process_handler.lambda_handler \
             --no-cli-pager
           
           # Limpar arquivo temporário

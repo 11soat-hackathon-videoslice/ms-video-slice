@@ -15,10 +15,10 @@ def exemplo_atualizacao_completa():
 
     os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkx8zj81Eq9o.mp4 s3://vdsc-prd-s3-videos/uploads/mkx8zj81Eq9o.mp4')
 
-    from handler.vdsc_process_handler import lambda_handler
+    from lambda_handler import lambda_handler
 
     # Caminho do arquivo JSON com o evento do DynamoDB
-    json_file_path = os.path.join(os.path.dirname(__file__), '../..', 'events', 'dynamodb_insert.json')
+    json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_insert.json')
 
     # Ler o conteúdo do arquivo JSON
     print(f"Carregando evento do arquivo: {json_file_path}")
