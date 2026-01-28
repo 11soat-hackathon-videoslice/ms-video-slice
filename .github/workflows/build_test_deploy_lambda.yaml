@@ -186,12 +186,12 @@ jobs:
           echo "📦 Preparando pacote de build-and-deploy..."
           mkdir -p lambda-package
           
-          if [ -f src/requirements-lambda.txt ]; then
-            echo "📥 Instalando dependências Python de produção..."
-            pip install -r src/requirements-lambda.txt -t lambda-package/ --quiet --no-cache-dir
-          elif [ -f src/requirements.txt ]; then
-            echo "⚠️ Usando requirements.txt (considere criar requirements-lambda.txt)"
+          if [ -f src/requirements.txt ]; then
+            echo "⚠️ Usando requirements.txt
             pip install -r src/requirements.txt -t lambda-package/ --quiet --no-cache-dir
+          else
+            echo "⚠️ Arquivo requirements.txt não encontrado, pulando instalação de dependências."
+            exit 1
           fi
           
           echo "📋 Copiando código fonte..."
@@ -240,35 +240,24 @@ jobs:
           PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024))
           echo "📊 Tamanho do pacote: ${PACKAGE_SIZE_MB}MB (${PACKAGE_SIZE_BYTES} bytes)"
           
-          # Se o pacote for maior que 50MB, fazer upload para S3 primeiro
-          if [ ${PACKAGE_SIZE_BYTES} -gt 52428800 ]; then
-            echo "⚠️ Pacote maior que 50MB, fazendo upload para S3..."
-            S3_KEY="deploy/lambda/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
+          echo "⬆️ Fazendo upload do pacote para S3..."
+          S3_KEY="deploy/lambda/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
             
-            aws s3 cp lambda-build-and-deployment-package.zip \
-              s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY} \
-              --region ${{ env.AWS_REGION }} \
-              --no-progress
+          aws s3 cp lambda-build-and-deployment-package.zip \
+            s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY} \
+            --region ${{ env.AWS_REGION }} \
+            --no-progress
             
-            echo "✅ Upload para S3 concluído: s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY}"
-            echo ""
-            echo "📤 Atualizando código da função Lambda via S3..."
+          echo "✅ Upload para S3 concluído: s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY}"
+          echo ""
+          echo "📤 Atualizando código da função Lambda via S3..."
             
-            aws lambda update-function-code \
-              --function-name ${FUNCTION_NAME} \
-              --s3-bucket ${{ env.S3_BUCKET_NAME }}
-              --s3-key ${S3_KEY} \
-              --region ${{ env.AWS_REGION }} \
-              --no-cli-pager
-          else
-            echo "📤 Atualizando código da função Lambda via upload direto..."
-            
-            aws lambda update-function-code \
-              --function-name ${FUNCTION_NAME} \
-              --zip-file fileb://lambda-build-and-deployment-package.zip \
-              --region ${{ env.AWS_REGION }} \
-              --no-cli-pager
-          fi
+          aws lambda update-function-code \
+            --function-name ${FUNCTION_NAME} \
+            --s3-bucket ${{ env.S3_BUCKET_NAME }} \
+            --s3-key ${S3_KEY} \
+            --region ${{ env.AWS_REGION }} \
+            --no-cli-pager
           
           echo "⏳ Aguardando conclusão da atualização do código..."
           aws lambda wait function-updated \
