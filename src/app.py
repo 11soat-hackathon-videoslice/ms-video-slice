@@ -29,6 +29,7 @@ max_timeout = config.vdsc['max_timeout']
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Handler principal da Lambda para processamento de eventos do DynamoDB"""
     logger.info(f"Recebido evento do DynamoDB: {json.dumps(event)}")
 
     try:
@@ -37,12 +38,25 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning("Registro vazio encontrado no evento. Pulando processamento deste registro.")
             return {'statusCode': 200, 'body': json.dumps({'error': 'Registro vazio no evento'})}
 
-        asyncio.run(process_record_aync(records))
+        # Executar processamento assíncrono e aguardar resultados
+        results = asyncio.run(process_record_aync(records))
 
-        return {'statusCode': 200, 'body': json.dumps({'message': 'Iniciado processamento assíncrono de de eventos'})}
+        # Verificar se houve erros durante o processamento
+        errors = [r for r in results if isinstance(r, Exception)]
+        if errors:
+            logger.error(f"Erros encontrados durante processamento: {len(errors)} de {len(results)} falharam")
+            return {
+                'statusCode': 500,
+                'body': json.dumps({
+                    'error': f'{len(errors)} vídeo(s) falharam no processamento',
+                    'details': [str(e) for e in errors]
+                })
+            }
+
+        return {'statusCode': 200, 'body': json.dumps({'message': f'Processamento concluído com sucesso para {len(results)} vídeo(s)'})}
 
     except asyncio.TimeoutError:
-        logger.error("Timeout ao processar eventos - tempo limite de 5 minutos excedido")
+        logger.error(f"Timeout ao processar eventos - tempo limite de {max_timeout} segundos excedido")
         return {
             'statusCode': 408,
             'body': json.dumps({'error': 'Timeout ao processar eventos'})
@@ -65,8 +79,11 @@ def process_video_async(event_dto: VdscMetadataDTO) -> None:
 
     except Exception as ex:
         logger.error(f"Erro ao processar vídeo {event_dto.video_id}: {str(ex)}", exc_info=ex)
+        # Re-lançar exceção para que seja capturada pelo gather com return_exceptions=True
+        raise
 
-async def process_record_aync(records:list) -> None:
+async def process_record_aync(records: list) -> list:
+    """Processa registros do DynamoDB de forma assíncrona e retorna lista de resultados"""
     async_loop = asyncio.get_event_loop()
     tasks = []
 
@@ -80,5 +97,12 @@ async def process_record_aync(records:list) -> None:
         tasks.append(task)
 
     if tasks:
-        await asyncio.wait(asyncio.gather(*tasks,return_exceptions=True),timeout=max_timeout)
+        # Usar wait_for com gather para aplicar timeout e coletar resultados
+        try:
+            results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=max_timeout)
+            return results
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout ao processar {len(tasks)} vídeos após {max_timeout} segundos")
+            raise
 
+    return []

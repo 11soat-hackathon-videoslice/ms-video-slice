@@ -41,13 +41,13 @@ class TestLambdaHandler:
     @patch('app.asyncio.run')
     def test_lambda_handler_success(self, mock_asyncio_run, valid_dynamodb_event):
         """Testa lambda_handler com sucesso"""
-        mock_asyncio_run.return_value = None
+        mock_asyncio_run.return_value = [None]  # Retorna lista com 1 resultado bem-sucedido
 
         result = lambda_handler(valid_dynamodb_event, None)
 
         assert result['statusCode'] == 200
         body = json.loads(result['body'])
-        assert 'Iniciado processamento assíncrono' in body['message']
+        assert 'Processamento concluído com sucesso' in body['message']
         mock_asyncio_run.assert_called_once()
 
     def test_lambda_handler_with_empty_records(self):
@@ -156,7 +156,8 @@ class TestProcessVideoAsync:
         mock_controller_class.return_value = mock_controller
         mock_controller.video_slice_processing.side_effect = Exception("Erro no processamento do vídeo")
 
-        with caplog.at_level('ERROR'):
+        # Agora deve lançar exceção já que fizemos raise
+        with pytest.raises(Exception, match="Erro no processamento do vídeo"):
             process_video_async(mock_event_dto)
 
         assert "Erro ao processar vídeo" in caplog.text
@@ -245,18 +246,18 @@ class TestIntegrationScenarios:
     @patch('app.asyncio.run')
     def test_lambda_handler_with_multiple_records(self, mock_asyncio_run, multiple_records_event):
         """Testa lambda_handler com múltiplos registros"""
-        mock_asyncio_run.return_value = None
+        mock_asyncio_run.return_value = [None, None, None]  # 3 resultados bem-sucedidos
 
         result = lambda_handler(multiple_records_event, None)
 
         assert result['statusCode'] == 200
         body = json.loads(result['body'])
-        assert 'Iniciado processamento assíncrono' in body['message']
+        assert 'Processamento concluído com sucesso para 3 vídeo(s)' in body['message']
 
     @patch('app.asyncio.run')
     def test_lambda_handler_returns_json_response(self, mock_asyncio_run, multiple_records_event):
         """Testa se o handler retorna resposta JSON válida"""
-        mock_asyncio_run.return_value = None
+        mock_asyncio_run.return_value = [None, None, None]  # 3 resultados bem-sucedidos
 
         result = lambda_handler(multiple_records_event, None)
 
