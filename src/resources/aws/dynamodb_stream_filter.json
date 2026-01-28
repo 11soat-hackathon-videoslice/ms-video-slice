@@ -1,0 +1,10 @@
+{
+  "Filters": [
+    {
+      "Pattern": "{\"eventName\":[\"INSERT\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"UPLOADED\"]}}}}"
+    },
+    {
+      "Pattern": "{\"eventName\":[\"MODIFY\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"RETRYING\"]}}}}"
+    }
+  ]
+}
