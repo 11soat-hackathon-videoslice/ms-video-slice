@@ -2,15 +2,16 @@ import json
 import logging
 from typing import Dict, Any
 
-from ..datasources.database.dynamodb_repository import DynamoDBRepository
-from ..datasources.storage.s3_repository import S3StorageRepository
-from ..datasources.producer.event_producer import EventProducer
-from ..dataproxy.vdsc_dataproxy import VdscDataProxy
-from ..config.vdsc_config import VdscConfig
+# Imports absolutos (funcionam tanto localmente quanto na Lambda)
+from aws.datasources.database.dynamodb_repository import DynamoDBRepository
+from aws.datasources.storage.s3_repository import S3StorageRepository
+from aws.datasources.producer.event_producer import EventProducer
+from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
+from aws.config.vdsc_config import VdscConfig
 
-from ...core.dtos import VdscMetadataDTO
-from ...core.adapters.vdsc_controller import VdscController
-from .vdsc_exception_handler import VdscExceptionHandler
+from core.dtos import VdscMetadataDTO
+from core.adapters.vdsc_controller import VdscController
+from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ event_producer = EventProducer()
 vdsc_handler= VdscExceptionHandler()
 
 
-def vdsc_process_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     logger.info(f"Recebido evento do DynamoDB: {json.dumps(event)}")
 

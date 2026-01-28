@@ -2,7 +2,7 @@
 import pytest
 import json
 from unittest.mock import Mock, patch, MagicMock
-from src.aws.handler.vdsc_process_handler import vdsc_process_handler
+from src.aws.handler.vdsc_process_handler import lambda_handler
 
 
 @pytest.mark.unit
@@ -45,7 +45,7 @@ class TestVdscProcessHandler:
         mock_controller = Mock()
         mock_controller_class.return_value = mock_controller
 
-        result = vdsc_process_handler(valid_dynamodb_event, None)
+        result = lambda_handler(valid_dynamodb_event, None)
 
         # Handler não retorna nada em caso de sucesso
         mock_controller.video_slice_processing.assert_called_once()
@@ -55,7 +55,7 @@ class TestVdscProcessHandler:
         """Testa handler com evento inválido"""
         valid_dynamodb_event['Records'][0]['dynamodb']['NewImage']['videoId'] = {'S': ''}
 
-        result = vdsc_process_handler(valid_dynamodb_event, None)
+        result = lambda_handler(valid_dynamodb_event, None)
 
         assert result['statusCode'] == 500
         assert 'error' in json.loads(result['body'])
@@ -67,7 +67,7 @@ class TestVdscProcessHandler:
         mock_controller_class.return_value = mock_controller
         mock_controller.video_slice_processing.side_effect = Exception("Erro de processamento")
 
-        result = vdsc_process_handler(valid_dynamodb_event, None)
+        result = lambda_handler(valid_dynamodb_event, None)
 
         assert result['statusCode'] == 500
         assert 'error' in json.loads(result['body'])
@@ -75,6 +75,6 @@ class TestVdscProcessHandler:
     def test_handler_with_empty_records(self):
         """Testa handler com lista de registros vazia"""
         event = {'Records': []}
-        result = vdsc_process_handler(event, None)
+        result = lambda_handler(event, None)
         # Handler não deve retornar erro se não há registros
         assert result is None or result.get('statusCode') != 500

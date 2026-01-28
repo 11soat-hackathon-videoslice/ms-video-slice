@@ -13,9 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 def exemplo_atualizacao_completa():
     """Exemplo de atualização completa de metadados no formato DynamoDB"""
 
-    os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkn8zxeytPTo.mp4 s3://vdsc-prd-s3-videos/uploads/mkn8zxeytPTo.mp4')
+    os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkx8zj81Eq9o.mp4 s3://vdsc-prd-s3-videos/uploads/mkx8zj81Eq9o.mp4')
 
-    from handler.vdsc_process_handler import vdsc_process_handler
+    from handler.vdsc_process_handler import lambda_handler
 
     # Caminho do arquivo JSON com o evento do DynamoDB
     json_file_path = os.path.join(os.path.dirname(__file__), '../..', 'events', 'dynamodb_insert.json')
@@ -37,7 +37,7 @@ def exemplo_atualizacao_completa():
     print(f"{'='*60}\n")
 
     try:
-        result = vdsc_process_handler(event, context)
+        result = lambda_handler(event, context)
         print(f"\n{'='*60}")
         print("Processamento finalizado com sucesso!")
         print("="*60)

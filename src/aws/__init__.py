@@ -1,5 +1,5 @@
 # Handler principal
-from .handler.vdsc_process_handler import vdsc_process_handler
+from .handler.vdsc_process_handler import lambda_handler
 from .handler.vdsc_exception_handler import VdscExceptionHandler
 
 # Configurações
@@ -19,7 +19,7 @@ from .datasources.producer.event_producer import EventProducer
 
 __all__ = [
     # Handlers
-    'vdsc_process_handler',
+    'lambda_handler',
     'VdscExceptionHandler',
 
     # Config
