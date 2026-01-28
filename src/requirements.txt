@@ -1,6 +1,7 @@
 pytest
 pytest-cov
 pytest-mock
+pytest-asyncio
 moto
 requests
 opencv-python-headless==4.10.0.84

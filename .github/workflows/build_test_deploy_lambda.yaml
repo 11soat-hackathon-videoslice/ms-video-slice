@@ -40,6 +40,8 @@ env:
   VDSC_PNG_COMPRESSION_LEVEL: ${{ vars.VDSC_PNG_COMPRESSION_LEVEL }}
   VDSC_ZIP_COMPRESSION_LEVEL: ${{ vars.VDSC_ZIP_COMPRESSION_LEVEL }}
   VDSC_QUALITY: ${{ vars.VDSC_QUALITY }}
+  VDSC_MAX_WORKERS: ${{ vars.VDSC_MAX_WORKERS }}
+  VDSC_MAX_TIMEOUT: ${{ vars.VDSC_MAX_TIMEOUT }}
 
 jobs:
   tests-and-coverage:
@@ -290,7 +292,9 @@ jobs:
             --arg zip_compression "${{ env.VDSC_ZIP_COMPRESSION_LEVEL }}" \
             --arg quality "${{ env.VDSC_QUALITY }}" \
             --arg mpl_config "/tmp/matplotlib" \
-            '{Variables: { S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality, MPLCONFIGDIR: $mpl_config}}' \
+            --arg max_workers "${{ env.VDSC_MAX_WORKERS }}" \
+            --arg max_timeout "${{ env.VDSC_MAX_TIMEOUT }}" \
+            '{Variables: {S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality, MPLCONFIGDIR: $mpl_config, VDSC_MAX_WORKERS: $max_workers, VDSC_MAX_TIMEOUT: $max_timeout}}' \
             > env-vars.json
           
           echo "📋 Variáveis de ambiente a serem configuradas:"

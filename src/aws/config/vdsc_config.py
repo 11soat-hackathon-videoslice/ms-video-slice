@@ -34,8 +34,9 @@ class VdscConfig:
             'table_name': os.getenv('DYNAMODB_TABLE_NAME', 'VideoSlice')
         }
         self.vdsc = {
+            'max_workers': int(os.getenv('VDSC_MAX_WORKERS', '5')),
+            'max_timeout': int(os.getenv('VDSC_MAX_TIMEOUT', '300')),
             'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
             'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
             'quality':quality
         }
-
