@@ -35,8 +35,8 @@ env:
   VDSC_QUALITY: ${{ vars.VDSC_QUALITY }}
 
 jobs:
-  build-and-test:
-    name: Build e Testes
+  tests-and-coverage:
+    name: Testes e Quality Gate
     runs-on: ubuntu-latest
 
     steps:
@@ -132,7 +132,7 @@ jobs:
   approval:
     name: Aprovação Manual
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: tests-and-coverage
     if: github.event_name == 'pull_request'
     environment:
       name: production-approval
@@ -144,19 +144,19 @@ jobs:
           approvers: gustavo-log,titoparizotto
           minimum-approvals: 1
 
-  deploy:
-    name: Deploy na AWS
+  build-and-deploy:
+    name: Build e Deploy na AWS
     runs-on: ubuntu-latest
-    needs: [build-and-test, approval]
+    needs: [tests-and-coverage, approval]
     if: |
       always() &&
-      needs.build-and-test.result == 'success' &&
+      needs.tests-and-coverage.result == 'success' &&
       (
         ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/develop') ||
         (github.event_name == 'pull_request' && needs.approval.result == 'success')
       ) &&
       (needs.approval.result == 'success' || needs.approval.result == 'skipped')
-    # Se for push na develop: executa direto após build-and-test (approval será skipped)
+    # Se for push na develop: executa direto após tests-and-coverage (approval será skipped)
     # Se for pull_request para master: só executa após aprovação manual bem-sucedida
 
     steps:
@@ -181,9 +181,9 @@ jobs:
           aws sts get-caller-identity
           echo "✅ Credenciais AWS configuradas corretamente"
 
-      - name: Preparar pacote de deploy
+      - name: Preparar pacote de build-and-deploy
         run: |
-          echo "📦 Preparando pacote de deploy..."
+          echo "📦 Preparando pacote de build-and-deploy..."
           mkdir -p lambda-package
           
           if [ -f src/requirements-lambda.txt ]; then
@@ -220,10 +220,10 @@ jobs:
           
           echo "🗜️ Criando arquivo ZIP..."
           cd lambda-package
-          zip -r ../lambda-deployment-package.zip . -q -9
+          zip -r ../lambda-build-and-deployment-package.zip . -q -9
           cd ..
           
-          PACKAGE_SIZE=$(ls -lh lambda-deployment-package.zip | awk '{print $5}')
+          PACKAGE_SIZE=$(ls -lh lambda-build-and-deployment-package.zip | awk '{print $5}')
           echo "📊 Tamanho do pacote final: ${PACKAGE_SIZE}"
           echo "✅ Pacote preparado com sucesso"
         env:
@@ -231,21 +231,21 @@ jobs:
 
       - name: Deploy via AWS CLI
         run: |
-          echo "🚀 Iniciando deploy da Lambda via AWS CLI..."
+          echo "🚀 Iniciando build-and-deploy da Lambda via AWS CLI..."
           TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
           FUNCTION_NAME="vdsc-prd-lmb-video-slice"
           
           # Verificar tamanho do pacote
-          PACKAGE_SIZE_BYTES=$(stat -c%s lambda-deployment-package.zip)
+          PACKAGE_SIZE_BYTES=$(stat -c%s lambda-build-and-deployment-package.zip)
           PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024))
           echo "📊 Tamanho do pacote: ${PACKAGE_SIZE_MB}MB (${PACKAGE_SIZE_BYTES} bytes)"
           
           # Se o pacote for maior que 50MB, fazer upload para S3 primeiro
           if [ ${PACKAGE_SIZE_BYTES} -gt 52428800 ]; then
             echo "⚠️ Pacote maior que 50MB, fazendo upload para S3..."
-            S3_KEY="lambda-deployments/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
+            S3_KEY="lambda-build-and-deployments/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
             
-            aws s3 cp lambda-deployment-package.zip \
+            aws s3 cp lambda-build-and-deployment-package.zip \
               s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY} \
               --region ${{ env.AWS_REGION }} \
               --no-progress
@@ -265,7 +265,7 @@ jobs:
             
             aws lambda update-function-code \
               --function-name ${FUNCTION_NAME} \
-              --zip-file fileb://lambda-deployment-package.zip \
+              --zip-file fileb://lambda-build-and-deployment-package.zip \
               --region ${{ env.AWS_REGION }} \
               --no-cli-pager
           fi
@@ -279,11 +279,33 @@ jobs:
           
           echo ""
           echo "⚙️ Atualizando configurações da Lambda..."
+          
+          # Criar arquivo JSON com as variáveis de ambiente usando jq
+          jq -n \
+            --arg aws_region "${{ env.AWS_REGION }}" \
+            --arg s3_bucket "${{ env.S3_BUCKET_NAME }}" \
+            --arg s3_uploads "${{ env.S3_BUCKET_DIR_UPLOADS }}" \
+            --arg s3_finished "${{ env.S3_BUCKET_DIR_FINISHED }}" \
+            --arg s3_processing "${{ env.S3_BUCKET_DIR_PROCESSING }}" \
+            --arg event_bus "${{ env.EVENT_BUS_NAME }}" \
+            --arg dynamodb_table "${{ env.DYNAMODB_TABLE_NAME }}" \
+            --arg png_compression "${{ env.VDSC_PNG_COMPRESSION_LEVEL }}" \
+            --arg zip_compression "${{ env.VDSC_ZIP_COMPRESSION_LEVEL }}" \
+            --arg quality "${{ env.VDSC_QUALITY }}" \
+            '{Variables: {AWS_REGION: $aws_region, S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality}}' \
+            > env-vars.json
+          
+          echo "📋 Variáveis de ambiente a serem configuradas:"
+          cat env-vars.json
+          
           aws lambda update-function-configuration \
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
-            --environment "Variables={AWS_REGION=${{ env.AWS_REGION }},S3_BUCKET_NAME=${{ env.S3_BUCKET_NAME }},S3_BUCKET_DIR_UPLOADS=${{ env.S3_BUCKET_DIR_UPLOADS }},S3_BUCKET_DIR_FINISHED=${{ env.S3_BUCKET_DIR_FINISHED }},S3_BUCKET_DIR_PROCESSING=${{ env.S3_BUCKET_DIR_PROCESSING }},EVENT_BUS_NAME=${{ env.EVENT_BUS_NAME }},DYNAMODB_TABLE_NAME=${{ env.DYNAMODB_TABLE_NAME }},VDSC_PNG_COMPRESSION_LEVEL=${{ env.VDSC_PNG_COMPRESSION_LEVEL }},VDSC_ZIP_COMPRESSION_LEVEL=${{ env.VDSC_ZIP_COMPRESSION_LEVEL }},VDSC_QUALITY=${{ env.VDSC_QUALITY }}}" \
+            --environment file://env-vars.json \
             --no-cli-pager
+          
+          # Limpar arquivo temporário
+          rm -f env-vars.json
           
           echo "⏳ Aguardando conclusão da atualização de configuração..."
           aws lambda wait function-updated \
@@ -345,7 +367,7 @@ jobs:
 
       - name: Verificar status da função Lambda
         run: |
-          echo "📋 Informações da função Lambda após deploy:"
+          echo "📋 Informações da função Lambda após build-and-deploy:"
           FUNCTION_NAME="vdsc-prd-lmb-video-slice"
           
           aws lambda get-function \
