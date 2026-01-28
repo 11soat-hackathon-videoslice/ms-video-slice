@@ -1,6 +1,8 @@
 import json
 import logging
 from typing import Dict, Any
+import os
+
 
 # Imports absolutos (funcionam tanto localmente quanto na Lambda)
 from aws.datasources.database.dynamodb_repository import DynamoDBRepository
@@ -20,6 +22,7 @@ dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.a
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()
 vdsc_handler= VdscExceptionHandler()
+os.environ['MPLCONFIGDIR'] = '/tmp/matplotlib'
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
