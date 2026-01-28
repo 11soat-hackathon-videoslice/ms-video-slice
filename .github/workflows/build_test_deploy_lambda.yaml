@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_only:
-        description: 'Marcar como true para realizar diretamente deploy'
+        description: 'Pular testes e executar apenas o deploy (true/false)'
         required: false
         default: false
         type: boolean
