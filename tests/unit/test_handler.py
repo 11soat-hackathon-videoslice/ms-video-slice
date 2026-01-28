@@ -2,7 +2,7 @@
 import pytest
 import json
 from unittest.mock import Mock, patch
-from lambda_handler import lambda_handler
+from app import lambda_handler
 
 
 @pytest.mark.unit

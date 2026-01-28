@@ -12,10 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # ============================================================
 def exemplo_atualizacao_completa():
     """Exemplo de atualização completa de metadados no formato DynamoDB"""
-
+    from src.app import lambda_handler
     os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkx8zj81Eq9o.mp4 s3://vdsc-prd-s3-videos/uploads/mkx8zj81Eq9o.mp4')
-
-    from lambda_handler import lambda_handler
 
     # Caminho do arquivo JSON com o evento do DynamoDB
     json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_insert.json')
