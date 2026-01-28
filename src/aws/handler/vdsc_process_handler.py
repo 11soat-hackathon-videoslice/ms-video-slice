@@ -2,14 +2,14 @@ import json
 import logging
 from typing import Dict, Any
 
-from datasources.database.dynamodb_repository import DynamoDBRepository
-from datasources.storage.s3_repository import S3StorageRepository
-from datasources.producer.event_producer import EventProducer
-from dataproxy.vdsc_dataproxy import VdscDataProxy
-from config.vdsc_config import VdscConfig
+from ..datasources.database.dynamodb_repository import DynamoDBRepository
+from ..datasources.storage.s3_repository import S3StorageRepository
+from ..datasources.producer.event_producer import EventProducer
+from ..dataproxy.vdsc_dataproxy import VdscDataProxy
+from ..config.vdsc_config import VdscConfig
 
-from core.dtos import VdscMetadataDTO
-from core.adapters.vdsc_controller import VdscController
+from ...core.dtos import VdscMetadataDTO
+from ...core.adapters.vdsc_controller import VdscController
 from .vdsc_exception_handler import VdscExceptionHandler
 
 logging.basicConfig(level=logging.INFO)
@@ -35,7 +35,6 @@ def vdsc_process_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
             dataproxy = VdscDataProxy(dynamodb=dynamodb_repository, s3=s3_repository, event_producer=event_producer)
             vdsc_controller = VdscController(dataproxy=dataproxy, handler=vdsc_handler)
-
             vdsc_controller.video_slice_processing(event_dto, config)
 
     except Exception as ex:

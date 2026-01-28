@@ -45,7 +45,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configurar Python ${{ env.PYTHON_VERSION }}
+      - name: Configurar Python ${{ vars.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -163,7 +163,7 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Configurar Python ${{ env.PYTHON_VERSION }}
+      - name: Configurar Python ${{ vars.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
