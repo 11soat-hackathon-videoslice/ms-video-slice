@@ -299,7 +299,6 @@ jobs:
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
             --environment file://env-vars.json \
-            --runtime "python${{ env.PYTHON_VERSION }}" \
             --no-cli-pager
           
           # Limpar arquivo temporário
