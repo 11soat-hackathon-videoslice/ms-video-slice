@@ -19,11 +19,14 @@ from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 ### Injeção de dependências ####
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 config = VdscConfig()
 dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()
 vdsc_handler= VdscExceptionHandler()
+
+
 executor = ThreadPoolExecutor(max_workers=config.vdsc['max_workers'])
 max_timeout = config.vdsc['max_timeout']
 

@@ -104,15 +104,15 @@ class VdscProcessUseCase:
 
     def _create_interval_list(self, vdsc_metadata, time_unit_multiplier ):
 
-        start_time = vdsc_metadata.start_time
-        end_time = vdsc_metadata.end_time
-        time_interval_list = []
+        start_time = int(vdsc_metadata.start_time * time_unit_multiplier)
+        end_time = int(vdsc_metadata.end_time * time_unit_multiplier)
+        interval = int(vdsc_metadata.time_interval[0] * time_unit_multiplier)
 
-        if len(vdsc_metadata.time_interval) == 1 and time_unit_multiplier !=1:
-            interval = vdsc_metadata.time_interval[0]
-            time_interval_list = self._get_recurrent_time_intervals(start_time, end_time, interval, time_unit_multiplier)
+        if len(vdsc_metadata.time_interval) == 1:
+
+            time_interval_list = self._get_recurrent_time_intervals(start_time, end_time, interval)
         else:
-            time_interval_list = self._get_specific_time_intervals(vdsc_metadata.time_interval, time_unit_multiplier)
+            time_interval_list = self._get_specific_time_intervals(vdsc_metadata.time_interval, int(time_unit_multiplier))
         return time_interval_list
 
     def _create_zip_buffer(self, file_info_list: list[tuple[str, bytes]], compression_level: int) -> io.BytesIO:
@@ -162,16 +162,15 @@ class VdscProcessUseCase:
         dir_key = "dir_" + path_type
         return f"{config.s3_bucket[dir_key]}{video_id}/"
 
-    def _get_recurrent_time_intervals(self, start_time, end_time, interval, multiplier):
+    def _get_recurrent_time_intervals(self, start_time: int, end_time: int, interval: int):
         current_time = start_time
         time_interval_list = []
         while current_time < end_time:
-            time_in_ms = current_time * multiplier
-            time_interval_list.append(time_in_ms)
+            time_interval_list.append(current_time)
             current_time += interval
         return time_interval_list
 
-    def _get_specific_time_intervals(self, time_intervals, multiplier) -> list[int]:
+    def _get_specific_time_intervals(self, time_intervals, multiplier: int) -> list[int]:
         """Converte intervalos de tempo específicos para milissegundos"""
         return [int(time) * multiplier for time in time_intervals]
 

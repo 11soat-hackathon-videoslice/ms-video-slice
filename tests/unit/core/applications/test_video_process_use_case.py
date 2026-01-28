@@ -104,8 +104,8 @@ class TestVdscProcessUseCase:
 
     def test_get_recurrent_time_intervals(self, use_case):
         """Testa geração de intervalos recorrentes"""
-        result = use_case._get_recurrent_time_intervals(0, 30, 10, 1000)
-        assert result == [0, 10000, 20000]
+        result = use_case._get_recurrent_time_intervals(0, 30, 10)
+        assert result == [0, 10, 20]
 
     def test_metadata_update_status(self, use_case, valid_event_dto):
         """Testa atualização de status de metadados"""

@@ -305,6 +305,8 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --environment file://env-vars.json \
             --handler app.lambda_handler \
+            --timeout 30 \
+            --memory-size 512 \
             --no-cli-pager
           
           # Limpar arquivo temporário
