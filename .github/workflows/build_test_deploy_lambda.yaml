@@ -237,7 +237,7 @@ jobs:
           
           # Verificar tamanho do pacote
           PACKAGE_SIZE_BYTES=$(stat -c%s lambda-build-and-deployment-package.zip)
-          PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024))
+          PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024)) 
           echo "📊 Tamanho do pacote: ${PACKAGE_SIZE_MB}MB (${PACKAGE_SIZE_BYTES} bytes)"
           
           echo "⬆️ Fazendo upload do pacote para S3..."
@@ -270,6 +270,8 @@ jobs:
           echo "⚙️ Atualizando configurações da Lambda..."
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
+          echo $PWD
+          ls -ltra 
           ENV_VARIABLES="resources/aws/env_variables.json"
           cat $ENV_VARIABLES
           
