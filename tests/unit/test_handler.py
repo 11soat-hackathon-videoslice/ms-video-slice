@@ -1,7 +1,7 @@
 """Testes unitários para lambda_handler"""
 import pytest
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from app import lambda_handler
 
 
@@ -38,34 +38,36 @@ class TestVdscProcessHandler:
             ]
         }
 
-    @patch('app.VdscController')
-    @patch('app.VdscDataProxy')
-    def test_handler_success(self, mock_dataproxy_class, mock_controller_class, valid_dynamodb_event):
+    @patch('app.process_video_async')
+    @patch('app.asyncio.run')
+    def test_handler_success(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event):
         """Testa handler com sucesso"""
-        mock_controller = Mock()
-        mock_controller_class.return_value = mock_controller
+        mock_asyncio_run.return_value = [None]  # Retorna lista com 1 resultado bem-sucedido
 
         result = lambda_handler(valid_dynamodb_event, None)
 
-        # Handler não retorna nada em caso de sucesso
-        mock_controller.video_slice_processing.assert_called_once()
+        assert result['statusCode'] == 200
+        body = json.loads(result['body'])
+        assert 'Processamento concluído com sucesso' in body['message']
+        mock_asyncio_run.assert_called_once()
 
-    @patch('app.VdscController')
-    def test_handler_with_invalid_event(self, mock_controller_class, valid_dynamodb_event):
+    @patch('app.process_video_async')
+    @patch('app.asyncio.run')
+    def test_handler_with_invalid_event(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event):
         """Testa handler com evento inválido"""
         valid_dynamodb_event['Records'][0]['dynamodb']['NewImage']['videoId'] = {'S': ''}
+        mock_asyncio_run.side_effect = Exception("Erro de validação")
 
         result = lambda_handler(valid_dynamodb_event, None)
 
         assert result['statusCode'] == 500
         assert 'error' in json.loads(result['body'])
 
-    @patch('app.VdscController')
-    def test_handler_with_processing_error(self, mock_controller_class, valid_dynamodb_event):
+    @patch('app.process_video_async')
+    @patch('app.asyncio.run')
+    def test_handler_with_processing_error(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event):
         """Testa handler com erro no processamento"""
-        mock_controller = Mock()
-        mock_controller_class.return_value = mock_controller
-        mock_controller.video_slice_processing.side_effect = Exception("Erro de processamento")
+        mock_asyncio_run.side_effect = Exception("Erro de processamento")
 
         result = lambda_handler(valid_dynamodb_event, None)
 
@@ -76,5 +78,7 @@ class TestVdscProcessHandler:
         """Testa handler com lista de registros vazia"""
         event = {'Records': []}
         result = lambda_handler(event, None)
-        # Handler não deve retornar erro se não há registros
-        assert result is None or result.get('statusCode') != 500
+        # Handler retorna 200 com mensagem de erro quando não há registros
+        assert result['statusCode'] == 200
+        body = json.loads(result['body'])
+        assert 'error' in body

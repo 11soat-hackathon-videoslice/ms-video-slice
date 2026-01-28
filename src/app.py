@@ -3,9 +3,12 @@ import logging
 from typing import Dict, Any
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from aws_lambda_powertools.utilities.idempotency import (
+     IdempotencyConfig, DynamoDBPersistenceLayer, idempotent
+ )
 
 
-# Imports absolutos (funcionam tanto localmente quanto na Lambda)
+
 from aws.datasources.database.dynamodb_repository import DynamoDBRepository
 from aws.datasources.storage.s3_repository import S3StorageRepository
 from aws.datasources.producer.event_producer import EventProducer
@@ -20,17 +23,21 @@ from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Configurações e repositórios
 config = VdscConfig()
 dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()
 vdsc_handler= VdscExceptionHandler()
 
-
+# Configuração do executor de threads para processamento paralelo
 executor = ThreadPoolExecutor(max_workers=config.vdsc['max_workers'])
 max_timeout = config.vdsc['max_timeout']
 
+persistence_layer = DynamoDBPersistenceLayer(table_name="VideoSliceIdempotencyTable")
+idempotent_config = IdempotencyConfig(event_key_jmespath="Records[*].eventID")
 
+@idempotent(config=idempotent_config, persistence_layer=persistence_layer)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
     logger.info(f"Recebido evento do DynamoDB: {json.dumps(event)}")

@@ -38,8 +38,9 @@ class TestLambdaHandler:
             ]
         }
 
+    @patch('app.process_video_async')
     @patch('app.asyncio.run')
-    def test_lambda_handler_success(self, mock_asyncio_run, valid_dynamodb_event):
+    def test_lambda_handler_success(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event):
         """Testa lambda_handler com sucesso"""
         mock_asyncio_run.return_value = [None]  # Retorna lista com 1 resultado bem-sucedido
 
@@ -71,8 +72,9 @@ class TestLambdaHandler:
         body = json.loads(result['body'])
         assert 'error' in body
 
+    @patch('app.process_video_async')
     @patch('app.asyncio.run')
-    def test_lambda_handler_with_timeout_error(self, mock_asyncio_run, valid_dynamodb_event):
+    def test_lambda_handler_with_timeout_error(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event):
         """Testa lambda_handler quando ocorre timeout"""
         import asyncio
         mock_asyncio_run.side_effect = asyncio.TimeoutError()
@@ -83,8 +85,9 @@ class TestLambdaHandler:
         body = json.loads(result['body'])
         assert 'Timeout' in body['error']
 
+    @patch('app.process_video_async')
     @patch('app.asyncio.run')
-    def test_lambda_handler_with_generic_exception(self, mock_asyncio_run, valid_dynamodb_event):
+    def test_lambda_handler_with_generic_exception(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event):
         """Testa lambda_handler com exceção genérica"""
         mock_asyncio_run.side_effect = Exception("Erro inesperado no processamento")
 
@@ -94,10 +97,11 @@ class TestLambdaHandler:
         body = json.loads(result['body'])
         assert 'error' in body
 
+    @patch('app.process_video_async')
     @patch('app.asyncio.run')
-    def test_lambda_handler_logs_event(self, mock_asyncio_run, valid_dynamodb_event, caplog):
+    def test_lambda_handler_logs_event(self, mock_asyncio_run, mock_process_video, valid_dynamodb_event, caplog):
         """Testa se o handler registra o evento recebido nos logs"""
-        mock_asyncio_run.return_value = None
+        mock_asyncio_run.return_value = [None]
 
         with caplog.at_level('INFO'):
             lambda_handler(valid_dynamodb_event, None)
@@ -243,8 +247,9 @@ class TestIntegrationScenarios:
             ]
         }
 
+    @patch('app.process_video_async')
     @patch('app.asyncio.run')
-    def test_lambda_handler_with_multiple_records(self, mock_asyncio_run, multiple_records_event):
+    def test_lambda_handler_with_multiple_records(self, mock_asyncio_run, mock_process_video, multiple_records_event):
         """Testa lambda_handler com múltiplos registros"""
         mock_asyncio_run.return_value = [None, None, None]  # 3 resultados bem-sucedidos
 
@@ -254,8 +259,9 @@ class TestIntegrationScenarios:
         body = json.loads(result['body'])
         assert 'Processamento concluído com sucesso para 3 vídeo(s)' in body['message']
 
+    @patch('app.process_video_async')
     @patch('app.asyncio.run')
-    def test_lambda_handler_returns_json_response(self, mock_asyncio_run, multiple_records_event):
+    def test_lambda_handler_returns_json_response(self, mock_asyncio_run, mock_process_video, multiple_records_event):
         """Testa se o handler retorna resposta JSON válida"""
         mock_asyncio_run.return_value = [None, None, None]  # 3 resultados bem-sucedidos
 

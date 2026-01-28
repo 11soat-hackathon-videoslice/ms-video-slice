@@ -3,7 +3,9 @@ pytest-cov
 pytest-mock
 pytest-asyncio
 moto
+boto3
 requests
 opencv-python-headless==4.10.0.84
 Pillow==10.4.0
 numpy==1.26.4
+aws-lambda-powertools[tracer,validation]

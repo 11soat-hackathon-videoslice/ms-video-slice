@@ -1,8 +1,23 @@
 """Configurações e fixtures compartilhadas para os testes"""
 import pytest
 import sys
-import os
 from pathlib import Path
+from unittest.mock import MagicMock
+
+# Mock do decorador idempotent antes de qualquer import do app
+def mock_idempotent_decorator(config=None, persistence_layer=None, **kwargs):
+    """Mock do decorador idempotent que apenas passa através da função"""
+    def decorator(func):
+        return func
+    return decorator
+
+# Mock das classes de configuração de idempotência
+mock_idempotency_module = MagicMock()
+mock_idempotency_module.idempotent = mock_idempotent_decorator
+mock_idempotency_module.IdempotencyConfig = MagicMock
+mock_idempotency_module.DynamoDBPersistenceLayer = MagicMock
+
+sys.modules['aws_lambda_powertools.utilities.idempotency'] = mock_idempotency_module
 
 # Adiciona o diretório src ao path
 src_path = Path(__file__).parent.parent / "src"
