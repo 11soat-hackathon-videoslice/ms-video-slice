@@ -37,7 +37,7 @@ max_timeout = config.vdsc['max_timeout']
 persistence_layer = DynamoDBPersistenceLayer(table_name="VideoSliceIdempotencyTable")
 idempotent_config = IdempotencyConfig(event_key_jmespath="Records[*].eventID")
 
-@idempotent(config=idempotent_config, persistence_layer=persistence_layer)
+@idempotent(config=idempotent_config, persistence_store=persistence_layer)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
     logger.info(f"Recebido evento do DynamoDB: {json.dumps(event)}")
