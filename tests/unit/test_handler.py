@@ -1,4 +1,4 @@
-"""Testes unitários para vdsc_process_handler"""
+"""Testes unitários para lambda_handler"""
 import pytest
 import json
 from unittest.mock import Mock, patch
@@ -38,8 +38,8 @@ class TestVdscProcessHandler:
             ]
         }
 
-    @patch('src.aws.handler.vdsc_process_handler.VdscController')
-    @patch('src.aws.handler.vdsc_process_handler.VdscDataProxy')
+    @patch('app.VdscController')
+    @patch('app.VdscDataProxy')
     def test_handler_success(self, mock_dataproxy_class, mock_controller_class, valid_dynamodb_event):
         """Testa handler com sucesso"""
         mock_controller = Mock()
@@ -50,7 +50,7 @@ class TestVdscProcessHandler:
         # Handler não retorna nada em caso de sucesso
         mock_controller.video_slice_processing.assert_called_once()
 
-    @patch('src.aws.handler.vdsc_process_handler.VdscController')
+    @patch('app.VdscController')
     def test_handler_with_invalid_event(self, mock_controller_class, valid_dynamodb_event):
         """Testa handler com evento inválido"""
         valid_dynamodb_event['Records'][0]['dynamodb']['NewImage']['videoId'] = {'S': ''}
@@ -60,7 +60,7 @@ class TestVdscProcessHandler:
         assert result['statusCode'] == 500
         assert 'error' in json.loads(result['body'])
 
-    @patch('src.aws.handler.vdsc_process_handler.VdscController')
+    @patch('app.VdscController')
     def test_handler_with_processing_error(self, mock_controller_class, valid_dynamodb_event):
         """Testa handler com erro no processamento"""
         mock_controller = Mock()

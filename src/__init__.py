@@ -1,5 +1,4 @@
 # Handler Lambda
-from app import lambda_handler
 from .aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 # Configurações
@@ -32,7 +31,6 @@ from .core.interfaces import VdscControllerInterface, VdscDataProxyInterface, Vd
 
 __all__ = [
     # Handler Lambda
-    'lambda_handler',
     'VdscExceptionHandler',
 
     # Configurações
