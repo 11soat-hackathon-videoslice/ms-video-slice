@@ -22,7 +22,6 @@ dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.a
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()
 vdsc_handler= VdscExceptionHandler()
-os.environ['MPLCONFIGDIR'] = '/tmp/matplotlib'
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
