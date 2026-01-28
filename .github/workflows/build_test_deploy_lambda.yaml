@@ -6,6 +6,12 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_only:
+        description: 'Set to true to only deploy without running tests (for emergency fixes)'
+        required: false
+        default: 'false'
+
   push:
     branches:
       - develop
@@ -150,7 +156,9 @@ jobs:
     needs: [tests-and-coverage, approval]
     if: |
       always() &&
-      needs.tests-and-coverage.result == 'success' &&
+        (needs.tests-and-coverage.result == 'success' || 
+          (needs.tests-and-coverage.result == 'skipped' &&  github.event.inputs.deploy_only == 'true')
+        )&&
       (
         ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/develop') ||
         (github.event_name == 'pull_request' && needs.approval.result == 'success')
@@ -271,16 +279,16 @@ jobs:
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
           echo $PWD
-          ls -ltra 
+          ls -ltra
           ENV_VARIABLES="src/resources/aws/env_variables.json"
           cat $ENV_VARIABLES
           
           aws lambda update-function-configuration \
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
+            --architectures "x86_64" \
             --environment file://$ENV_VARIABLES \
             --runtime python${{ env.PYTHON_VERSION }} \
-            --architectures "x86_64" \
             --no-cli-pager
           
           echo "⏳ Aguardando conclusão da atualização de configuração..."
