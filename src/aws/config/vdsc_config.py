@@ -1,7 +1,7 @@
 import json
 import os
 
-quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'))
+quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\"', '"'))
 
 class VdscConfig:
     _instance = None
