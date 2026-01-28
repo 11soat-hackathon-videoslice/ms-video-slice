@@ -281,13 +281,14 @@ jobs:
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
           ENV_VARIABLES="src/resources/aws/env_variables.json"
-          cat $ENV_VARIABLES
+          envsubst < src/resources/aws/env_variables.json > env_final.json
+          cat env_final.json
           
           aws lambda update-function-configuration \
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
-            --environment file://$ENV_VARIABLES \
-            --runtime python${{ env.PYTHON_VERSION }} \
+            --environment file://env_final.json \
+            --runtime "python${{ env.PYTHON_VERSION }}" \
             --no-cli-pager
           
           echo "⏳ Aguardando conclusão da atualização de configuração..."

@@ -8,6 +8,6 @@
     "DYNAMODB_TABLE_NAME": " ${{ env.DYNAMODB_TABLE_NAME }}",
     "VDSC_PNG_COMPRESSION_LEVEL": " ${{ env.VDSC_PNG_COMPRESSION_LEVEL }}",
     "VDSC_ZIP_COMPRESSION_LEVEL": " ${{ env.VDSC_ZIP_COMPRESSION_LEVEL }}",
-    "VDSC_QUALITY": " ${{ env.VDSC_QUALITY }}"
+    "VDSC_QUALITY": "$(echo $VDSC_QUALITY | sed 's/\"/\\\\\"/g')"
   }
 }
