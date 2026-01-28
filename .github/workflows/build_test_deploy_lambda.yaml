@@ -280,15 +280,12 @@ jobs:
           echo "⚙️ Atualizando configurações da Lambda..."
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
-          echo $PWD
-          ls -ltra
           ENV_VARIABLES="src/resources/aws/env_variables.json"
           cat $ENV_VARIABLES
           
           aws lambda update-function-configuration \
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
-            --architectures "x86_64" \
             --environment file://$ENV_VARIABLES \
             --runtime python${{ env.PYTHON_VERSION }} \
             --no-cli-pager
