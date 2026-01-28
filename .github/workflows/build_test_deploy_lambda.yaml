@@ -256,7 +256,6 @@ jobs:
             
             aws lambda update-function-code \
               --function-name ${FUNCTION_NAME} \
-              --s3-bucket ${{ env.S3_BUCKET_NAME }} \
               --s3-key ${S3_KEY} \
               --region ${{ env.AWS_REGION }} \
               --no-cli-pager
@@ -282,6 +281,7 @@ jobs:
           
           # Criar arquivo JSON com as variáveis de ambiente usando jq
           jq -n \
+            --arg aws_region "${{ env.AWS_REGION }}" \
             --arg s3_bucket "${{ env.S3_BUCKET_NAME }}" \
             --arg s3_uploads "${{ env.S3_BUCKET_DIR_UPLOADS }}" \
             --arg s3_finished "${{ env.S3_BUCKET_DIR_FINISHED }}" \
@@ -291,7 +291,7 @@ jobs:
             --arg png_compression "${{ env.VDSC_PNG_COMPRESSION_LEVEL }}" \
             --arg zip_compression "${{ env.VDSC_ZIP_COMPRESSION_LEVEL }}" \
             --arg quality "${{ env.VDSC_QUALITY }}" \
-            '{Variables: {S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality}}' \
+            '{Variables: {AWS_REGION: $aws_region, S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality}}' \
             > env-vars.json
           
           echo "📋 Variáveis de ambiente a serem configuradas:"
@@ -301,6 +301,8 @@ jobs:
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
             --environment file://env-vars.json \
+            --runtime python${{ env.PYTHON_VERSION }} \
+            --architectures "x86_64" \
             --no-cli-pager
           
           # Limpar arquivo temporário
@@ -349,6 +351,21 @@ jobs:
           else
             echo "➕ Criando novo Event Source Mapping..."
             
+            # Criar arquivo JSON com os filtros usando jq
+            jq -n '{
+              Filters: [
+                {
+                  Pattern: "{\"eventName\":[\"INSERT\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"UPLOADED\"]}}}}"
+                },
+                {
+                  Pattern: "{\"eventName\":[\"MODIFY\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"RETRYING\"]}}}}"
+                }
+              ]
+            }' > filter-criteria.json
+            
+            echo "📋 Filtros a serem aplicados:"
+            cat filter-criteria.json
+            
             aws lambda create-event-source-mapping \
               --function-name ${FUNCTION_NAME} \
               --event-source-arn ${{ env.DYNAMODB_STREAM_ARN }} \
@@ -357,9 +374,12 @@ jobs:
               --maximum-batching-window-in-seconds 0 \
               --parallelization-factor 1 \
               --enabled \
-              --filter-criteria 'Filters=[{Pattern="{\"eventName\":[\"INSERT\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"UPLOADED\"]}}}}"}},{Pattern="{\"eventName\":[\"MODIFY\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"RETRYING\"]}}}}"}]' \
+              --filter-criteria file://filter-criteria.json \
               --region ${{ env.AWS_REGION }} \
               --no-cli-pager
+            
+            # Limpar arquivo temporário
+            rm -f filter-criteria.json
             
             echo "✅ Event Source Mapping criado com sucesso"
           fi
