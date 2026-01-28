@@ -8,9 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       deploy_only:
-        description: 'Set to true to only deploy without running tests (for emergency fixes)'
+        description: 'Marcar como true para realizar diretamente deploy'
         required: false
-        default: 'false'
+        default: false
+        type: boolean
 
   push:
     branches:
