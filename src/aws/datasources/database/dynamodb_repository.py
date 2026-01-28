@@ -1,5 +1,5 @@
 from .dynamodb_interface import DynamoDBInterface
-from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
+from ....core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 import boto3
 import logging
 
