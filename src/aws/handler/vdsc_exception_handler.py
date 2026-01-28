@@ -2,8 +2,8 @@ import logging
 from functools import wraps
 from typing import Callable
 
-from ...core.exceptions.vdsc_exceptions import VdscException
-from ...core.interfaces.vdsc_exception_handler_interface import VdscExceptionHandlerInterface
+from core.exceptions.vdsc_exceptions import VdscException
+from core.interfaces.vdsc_exception_handler_interface import VdscExceptionHandlerInterface
 
 
 logger = logging.getLogger(__name__)

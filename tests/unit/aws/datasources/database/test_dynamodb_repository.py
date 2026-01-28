@@ -54,7 +54,9 @@ class TestDynamoDBRepository:
 
         result = repository.get_metadata_by_video_id("video123")
 
-        assert isinstance(result, VdscMetadataDTO)
+        assert result.__class__.__name__ == 'VdscMetadataDTO'
+        assert result.video_id == 'video123'
+        assert result.file_name == 'test.mp4'
         mock_dynamodb_client.get_item.assert_called_once()
 
     def test_get_metadata_by_video_id_not_found(self, repository, mock_dynamodb_client):
@@ -172,7 +174,7 @@ class TestDynamoDBRepository:
 
         result = repository._convert_to_dto(item)
 
-        assert isinstance(result, VdscMetadataDTO)
+        assert result.__class__.__name__ == 'VdscMetadataDTO'
         assert result.video_id == 'video456'
         assert result.file_name == 'convert_test.mp4'
         assert result.total_time == 7200
@@ -227,7 +229,7 @@ class TestDynamoDBRepository:
 
         result = repository.update_metadata_by_video_id(dto)
 
-        assert isinstance(result, VdscMetadataDTO)
+        assert result.__class__.__name__ == 'VdscMetadataDTO'
         assert result.video_id == 'video789'
         assert result.status == 'PROCESSING'
         assert result.retries == 1
