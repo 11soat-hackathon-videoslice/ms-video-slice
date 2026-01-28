@@ -298,7 +298,7 @@ jobs:
           aws lambda update-function-configuration \
             --function-name ${FUNCTION_NAME} \
             --region ${{ env.AWS_REGION }} \
-            --environment file://env_final.json \
+            --environment file://env-vars.json \
             --runtime "python${{ env.PYTHON_VERSION }}" \
             --no-cli-pager
           
