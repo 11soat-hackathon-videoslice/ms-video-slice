@@ -1,118 +1,46 @@
 import json
 import logging
 from typing import Dict, Any
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from aws_lambda_powertools.utilities.idempotency import (
-     IdempotencyConfig, DynamoDBPersistenceLayer, idempotent
- )
+from aws_lambda_powertools.utilities.data_classes import DynamoDBStreamEvent
+from aws_lambda_powertools.utilities.idempotency import (IdempotencyConfig, DynamoDBPersistenceLayer, idempotent_function)
 
-
-
-from aws.datasources.database.dynamodb_repository import DynamoDBRepository
-from aws.datasources.storage.s3_repository import S3StorageRepository
-from aws.datasources.producer.event_producer import EventProducer
-from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
-from aws.config.vdsc_config import VdscConfig
-
+# Importação de dependências via módulo vdsc_config
+from src.aws.config.vdsc_config import controller, config, async_events_queue
 from core.dtos import VdscMetadataDTO
-from core.adapters.vdsc_controller import VdscController
-from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
-### Injeção de dependências ####
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configurações e repositórios
-config = VdscConfig()
-dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
-s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
-event_producer = EventProducer()
-vdsc_handler= VdscExceptionHandler()
+#Configuração da camada de persistência para idempotência
+persistence_layer  = DynamoDBPersistenceLayer(table_name="VideoSliceIdempotencyTable")
+idempotent_config = IdempotencyConfig(event_key_jmespath="eventID", use_local_cache=True, local_cache_max_items=100)
 
-# Configuração do executor de threads para processamento paralelo
-executor = ThreadPoolExecutor(max_workers=config.vdsc['max_workers'])
-max_timeout = config.vdsc['max_timeout']
 
-persistence_layer = DynamoDBPersistenceLayer(table_name="VideoSliceIdempotencyTable")
-idempotent_config = IdempotencyConfig(event_key_jmespath="Records[*].eventID")
-
-@idempotent(config=idempotent_config, persistence_store=persistence_layer)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
     logger.info(f"Recebido evento do DynamoDB: {json.dumps(event)}")
+    idempotent_config.register_lambda_context(context)
 
-    try:
-        records = event['Records']
-        if not records:
-            logger.warning("Registro vazio encontrado no evento. Pulando processamento deste registro.")
-            return {'statusCode': 200, 'body': json.dumps({'error': 'Registro vazio no evento'})}
-
-        # Executar processamento assíncrono e aguardar resultados
-        results = asyncio.run(process_record_aync(records))
-
-        # Verificar se houve erros durante o processamento
-        errors = [r for r in results if isinstance(r, Exception)]
-        if errors:
-            logger.error(f"Erros encontrados durante processamento: {len(errors)} de {len(results)} falharam")
-            return {
-                'statusCode': 500,
-                'body': json.dumps({
-                    'error': f'{len(errors)} vídeo(s) falharam no processamento',
-                    'details': [str(e) for e in errors]
-                })
-            }
-        logger.info("Processamento concluído com sucesso para todos os vídeos")
-        return {'statusCode': 200, 'body': json.dumps({'message': f'Processamento concluído com sucesso para {len(results)} vídeo(s)'})}
-
-    except asyncio.TimeoutError:
-        logger.error(f"Timeout ao processar eventos - tempo limite de {max_timeout} segundos excedido")
-        return {
-            'statusCode': 408,
-            'body': json.dumps({'error': 'Timeout ao processar eventos'})
-        }
-    except Exception as ex:
-        logger.error(f"Erro inesperado ao processar evento: {str(ex)}", exc_info=ex)
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': str(ex)})
-        }
-
-def process_video_async(event_dto: VdscMetadataDTO) -> None:
-    """Processa o vídeo de forma síncrona (será executado em thread separada)"""
-    try:
-
-        dataproxy = VdscDataProxy(dynamodb=dynamodb_repository, s3=s3_repository, event_producer=event_producer)
-        vdsc_controller = VdscController(dataproxy=dataproxy, handler=vdsc_handler)
-        vdsc_controller.video_slice_processing(event_dto, config)
-        logger.info(f"Processamento concluído para vídeo ID: {event_dto.video_id}")
-
-    except Exception as ex:
-        logger.error(f"Erro ao processar vídeo {event_dto.video_id}: {str(ex)}", exc_info=ex)
-        # Re-lançar exceção para que seja capturada pelo gather com return_exceptions=True
-        raise
-
-async def process_record_aync(records: list) -> list:
-    """Processa registros do DynamoDB de forma assíncrona e retorna lista de resultados"""
-    async_loop = asyncio.get_event_loop()
-    tasks = []
-
+    records = list(DynamoDBStreamEvent(event).records)
     for record in records:
-        event_dto = VdscMetadataDTO.from_dynamodb_item(record['dynamodb']['NewImage'])
-        event_dto.validate()
-        logger.info(f"Metadados válidos para vídeo ID: {event_dto.video_id}")
+        process_new_event(record=record)
 
-        # Executar processamento em thread separada
-        task = async_loop.run_in_executor(executor, process_video_async, event_dto)
-        tasks.append(task)
+    return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
 
-    if tasks:
-        # Usar wait_for com gather para aplicar timeout e coletar resultados
-        try:
-            results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=max_timeout)
-            return results
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout ao processar {len(tasks)} vídeos após {max_timeout} segundos")
-            raise
+@idempotent_function(persistence_store=persistence_layer,config=idempotent_config,data_keyword_argument="record")
+def process_new_event(record):
+    logger.info(f"Enfileirando evento {record.event_id} do video {record.dynamodb.new_image.get('videoId')}")
+    async_events_queue.put((_process_video_event, record))
 
-    return []
+def _process_video_event(record):
+    try:
+
+        new_image = record.dynamodb.new_image
+        vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(new_image)
+        logger.info(f"Processando vídeo ID: {vdsc_metadata.video_id}")
+        controller.video_slice_processing(vdsc_metadata, config.vdsc)
+        logger.info(f"Processamento concluído para vídeo ID: {vdsc_metadata.video_id}")
+
+    except Exception as e:
+        logger.error(f"Erro ao processar vídeo ID: {vdsc_metadata.video_id} - {str(e)}")
+        controller.handler.handle_exception(e, vdsc_metadata)

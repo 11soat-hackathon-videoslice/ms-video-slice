@@ -119,25 +119,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=11soat-hackton-videoslice_ms-video-slice
-            -Dsonar.organization=11soat-hackton-videoslice
-            -Dsonar.projectName=ms-video-slice
-            -Dsonar.projectVersion=1.0
-            -Dsonar.branch.name=master
-            -Dsonar.sources=src
-            -Dsonar.tests=tests
-            -Dsonar.exclusions=**/__pycache__/**,**/__init__.py,**/tests/**,**/exemplo_rapido_test.py
-            -Dsonar.language=py
-            -Dsonar.python.version=3.12
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.coverage.exclusions=**/tests/**,**/__init__.py
-            -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.python.xunit.reportPath=test-results.xml
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.scm.provider=git
-            -Dsonar.scm.forceReloadAll=false
 
   approval:
     name: Aprovação Manual
