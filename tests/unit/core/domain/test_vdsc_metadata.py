@@ -313,9 +313,12 @@ class TestVdscMetadata:
         assert metadata.can_retry() is True
 
     def test_created_datetime_conversion(self, valid_dto):
-        """Testa conversão de created para datetime"""
+        """Testa que created é mantido como string no formato ISO 8601"""
         metadata = VdscMetadata(dto=valid_dto)
-        assert isinstance(metadata.created, datetime)
+        assert isinstance(metadata.created, str)
+        # Verifica formato ISO 8601: YYYY-MM-DDTHH:MM:SSZ
+        assert 'T' in metadata.created
+        assert metadata.created.endswith('Z')
 
     def test_created_as_datetime_object(self):
         """Testa criação com created já como datetime"""
@@ -358,4 +361,209 @@ class TestVdscMetadata:
         assert "VideoSliceMetadata" in repr_str
         assert "video123" in repr_str
         assert "test_video.mp4" in repr_str
+
+
+@pytest.mark.unit
+class TestVdscMetadataLogsTimestampFormat:
+    """Testes rigorosos para validação de formato ISO 8601 em logs gerados por VdscMetadata"""
+
+    @pytest.fixture
+    def valid_dto(self):
+        """Fixture com DTO válido"""
+        return VdscMetadataDTO(
+            video_id="video123",
+            file_name="test.mp4",
+            extension_file="mp4",
+            status="UPLOADED",
+            created="2026-01-13T00:00:00Z",
+            user_id="user123",
+            total_time=3600,
+            unit_time="s",
+            start_time=0,
+            end_time=60,
+            time_interval=["00:00:00"],
+            max_retry=3,
+            retries=0,
+            quality="high",
+            logs=[]
+        )
+
+    def test_add_log_generates_iso8601_timestamp(self, valid_dto):
+        """Testa se add_log gera timestamp no formato ISO 8601"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.add_log("Teste de log")
+
+        log = metadata.logs[0]
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+        assert 'T' in log.timestamp
+        assert log.timestamp.endswith('Z')
+
+    def test_mark_as_uploaded_generates_valid_timestamp(self, valid_dto):
+        """Testa se mark_as_uploaded gera timestamp válido"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_uploaded()
+
+        log = metadata.logs[-1]
+        assert isinstance(log.timestamp, str)
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+
+    def test_mark_as_processing_generates_valid_timestamp(self, valid_dto):
+        """Testa se mark_as_processing gera timestamp válido"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_processing()
+
+        log = metadata.logs[-1]
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+
+    def test_mark_as_finished_generates_valid_timestamp(self, valid_dto):
+        """Testa se mark_as_finished gera timestamp válido"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_finished()
+
+        log = metadata.logs[-1]
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+
+    def test_mark_as_retrying_generates_valid_timestamp(self, valid_dto):
+        """Testa se mark_as_retrying gera timestamp válido"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_retrying()
+
+        log = metadata.logs[-1]
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+
+    def test_mark_as_failed_generates_valid_timestamp(self, valid_dto):
+        """Testa se mark_as_failed gera timestamp válido"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.mark_as_failed("Error message")
+
+        log = metadata.logs[-1]
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+
+    def test_increment_retry_generates_valid_timestamp(self, valid_dto):
+        """Testa se increment_retry gera timestamp válido"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.increment_retry()
+
+        log = metadata.logs[-1]
+        assert len(log.timestamp) == 20
+        assert log.timestamp[10] == 'T'
+        assert log.timestamp[-1] == 'Z'
+
+    def test_multiple_operations_generate_valid_timestamps(self, valid_dto):
+        """Testa se múltiplas operações geram timestamps válidos"""
+        metadata = VdscMetadata(dto=valid_dto)
+
+        metadata.mark_as_uploaded()
+        metadata.mark_as_processing()
+        metadata.increment_retry()
+        metadata.mark_as_retrying()
+        metadata.mark_as_failed("Erro")
+
+        # Todos os logs devem ter formato ISO 8601
+        for log in metadata.logs:
+            assert len(log.timestamp) == 20
+            assert log.timestamp[10] == 'T'
+            assert log.timestamp[-1] == 'Z'
+            assert isinstance(log.timestamp, str)
+
+    def test_to_dict_preserves_iso8601_format_in_logs(self, valid_dto):
+        """Testa se to_dict preserva formato ISO 8601 nos logs"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.add_log("Log 1")
+        metadata.add_log("Log 2")
+
+        result = metadata.to_dict()
+
+        for log_dict in result['logs']:
+            assert 'timestamp' in log_dict
+            timestamp = log_dict['timestamp']
+            assert len(timestamp) == 20
+            assert timestamp[10] == 'T'
+            assert timestamp[-1] == 'Z'
+
+    def test_logs_timestamps_are_sequential(self, valid_dto):
+        """Testa se timestamps de logs são sequenciais (ou muito próximos)"""
+        import re
+        metadata = VdscMetadata(dto=valid_dto)
+
+        # Adiciona vários logs rapidamente
+        for i in range(5):
+            metadata.add_log(f"Log {i}")
+
+        # Todos devem ter formato válido
+        for log in metadata.logs:
+            pattern = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+            assert re.match(pattern, log.timestamp), \
+                f"Timestamp inválido: {log.timestamp}"
+
+    def test_custom_timestamp_in_add_log_uses_iso8601(self, valid_dto):
+        """Testa se timestamp customizado é convertido para ISO 8601"""
+        metadata = VdscMetadata(dto=valid_dto)
+        custom_time = datetime(2026, 1, 28, 21, 14, 41, tzinfo=UTC)
+
+        metadata.add_log("Log customizado", timestamp=custom_time)
+
+        log = metadata.logs[0]
+        assert log.timestamp == "2026-01-28T21:14:41Z"
+        assert len(log.timestamp) == 20
+
+    def test_workflow_logs_all_have_valid_format(self, valid_dto):
+        """Testa fluxo completo validando formato de todos os logs"""
+        import re
+        metadata = VdscMetadata(dto=valid_dto)
+
+        # Simula um fluxo completo
+        metadata.mark_as_uploaded()
+        metadata.mark_as_processing()
+        metadata.add_log("Iniciando processamento de frames")
+        metadata.increment_retry()
+        metadata.add_log("Frame 1 processado")
+        metadata.add_log("Frame 2 processado")
+        metadata.mark_as_finished()
+
+        pattern = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+
+        for i, log in enumerate(metadata.logs):
+            assert re.match(pattern, log.timestamp), \
+                f"Log {i} com timestamp inválido: {log.timestamp}"
+            assert log.timestamp[10] == 'T'
+            assert log.timestamp[-1] == 'Z'
+
+    def test_logs_timestamps_no_milliseconds(self, valid_dto):
+        """Testa se timestamps de logs não contêm milissegundos"""
+        metadata = VdscMetadata(dto=valid_dto)
+        metadata.add_log("Teste 1")
+        metadata.add_log("Teste 2")
+        metadata.add_log("Teste 3")
+
+        for log in metadata.logs:
+            assert '.' not in log.timestamp, \
+                f"Timestamp não deve ter milissegundos: {log.timestamp}"
+
+    def test_logs_timestamps_utc_only(self, valid_dto):
+        """Testa se todos os timestamps estão em UTC (Z)"""
+        metadata = VdscMetadata(dto=valid_dto)
+
+        metadata.mark_as_uploaded()
+        metadata.mark_as_processing()
+        metadata.mark_as_finished()
+
+        for log in metadata.logs:
+            assert log.timestamp.endswith('Z'), \
+                f"Timestamp deve estar em UTC: {log.timestamp}"
+            assert '+' not in log.timestamp, "Não deve usar offset +HH:MM"
+            assert log.timestamp.count('-') == 2, "Apenas 2 '-' na data"
+
 

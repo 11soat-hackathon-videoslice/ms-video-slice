@@ -17,11 +17,8 @@ class VdscMetadata:
         self.file_name = dto.file_name
         self.extension_file = dto.extension_file
         self.status = dto.status
-        # Converter created para datetime se for string
-        if isinstance(dto.created, str):
-            self.created = datetime.fromisoformat(dto.created.replace('Z', '+00:00'))
-        else:
-            self.created = dto.created
+        # Campo created é string no formato ISO 8601
+        self.created = dto.created
         self.user_id = dto.user_id
         self.total_time = dto.total_time
         self.unit_time = dto.unit_time
@@ -135,7 +132,7 @@ class VdscMetadata:
             "fileName": self.file_name,
             "extension_file": self.extension_file,
             "status": self.status,
-            "created": self.created.isoformat() + "Z" if self.created else None,
+            "created": self.created,
             "userId": self.user_id,
             "totalTime": self.total_time,
             "unitTime": self.unit_time,
@@ -151,20 +148,15 @@ class VdscMetadata:
     @classmethod
     def from_dict(cls, data: dict) -> 'VdscMetadata':
         """Cria VideoSliceMetadata a partir de um dicionário."""
-        created_str = data['created']
-        created = None
-        if created_str:
-            # Remove sufixo 'Z' se presente
-            created_str = created_str.rstrip('Z')
-            created = datetime.fromisoformat(created_str)
-
         logs_data = data.get('logs', [])
-        logs = [LogEntry.from_dict(log) for log in logs_data]
+        logs = [LogEntry.from_dict(log) if isinstance(log, dict) else log for log in logs_data]
 
         dto = VdscMetadataDTO(
             video_id=data['videoId'],
             file_name=data['fileName'],
-            extension=data.get('extension_file', data.get('extension', 'mp4')),
+            extension_file=data.get('extension_file', data.get('extensionFile', 'mp4')),
+            status=data.get('status', VdscStatusEnum.UPLOADED.value),
+            created=data.get('created'),
             user_id=data['userId'],
             total_time=data['totalTime'],
             unit_time=data.get('unitTime', 's'),
@@ -172,16 +164,12 @@ class VdscMetadata:
             end_time=data['endTime'],
             time_interval=data.get('timeInterval', []),
             max_retry=data.get('maxRetry', 3),
-            quality=data.get('quality', VideoQuality.HIGH.value)
-        )
-
-        return cls(
-            dto=dto,
-            status=data.get('status', VdscStatusEnum),
-            created=created,
             retries=data.get('retries', 0),
+            quality=data.get('quality', VideoQuality.HIGH.value),
             logs=logs
         )
+
+        return cls(dto=dto)
 
     def __repr__(self) -> str:
         return (f"VideoSliceMetadata(video_id='{self.video_id}', "

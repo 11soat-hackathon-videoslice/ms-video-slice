@@ -6,15 +6,11 @@ from typing import Optional
 class LogEntry:
     """Entidade de domínio representando uma entrada de log."""
 
-    def __init__(
-        self,
-        info: str,
-        timestamp: Optional[datetime] = None
-    ):
-        if timestamp:
-            self.timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            self.timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    def __init__(self, info: str, timestamp: Optional[datetime] = None):
+        """Inicializa LogEntry com timestamp no formato ISO 8601"""
+        if timestamp is None:
+            timestamp = datetime.now(UTC)
+        self.timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         self.info = info
 
     def to_dict(self) -> dict:
