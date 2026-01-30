@@ -1,21 +1,59 @@
-import json
-import logging
+import json, logging, threading, os
 from typing import Dict, Any
+
+import requests
 from aws_lambda_powertools.utilities.data_classes import DynamoDBStreamEvent
 from aws_lambda_powertools.utilities.idempotency import (IdempotencyConfig, DynamoDBPersistenceLayer, idempotent_function)
 
 # Importação de dependências via módulo vdsc_config
-from aws.config.vdsc_config import controller, config, async_events_queue, init_lambda_extension
+from aws.config.vdsc_config import controller, config, async_events_queue
 from core.dtos import VdscMetadataDTO
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-init_lambda_extension()
 
 #Configuração da camada de persistência para idempotência
 persistence_layer  = DynamoDBPersistenceLayer(table_name="VideoSliceIdempotencyTable")
 idempotent_config = IdempotencyConfig(event_key_jmespath="eventID", use_local_cache=True, local_cache_max_items=100)
 
+def process_async_loop(ext_id):
+    """Loop da extensão que mantém a Lambda viva até processar a fila"""
+    while True:
+        # Avisa a AWS: 'Pode mandar o próximo evento ou me congelar'
+        # Mas a extensão só faz isso quando a fila interna esvaziar
+        requests.get(
+            f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
+            headers={'Lambda-Extension-Identifier': ext_id},
+            timeout=None
+        )
+
+        try:
+            # Processa o que está na fila antes de liberar o congelamento
+            while not async_events_queue.empty():
+                task_func, data = async_events_queue.get_nowait()
+                task_func(data)
+                async_events_queue.task_done()
+        except Exception as e:
+            logger.error(f"Erro no background: {e}")
+
+# Registro da Extensão no Warm Start
+def init_extension():
+
+    if os.environ.get('AWS_LAMBDA_RUNTIME_API') is None:
+        logger.info("AWS_LAMBDA_RUNTIME_API não está definido. A extensão não será iniciada.")
+        return
+    try:
+        res = requests.post(
+            f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/register",
+            json={'events': ['INVOKE']},
+            headers={'Lambda-Extension-Name': 'InternalAsyncExt'}
+        )
+        ext_id = res.headers['Lambda-Extension-Identifier']
+        threading.Thread(target=process_async_loop, args=(ext_id,), daemon=True).start()
+    except Exception as e:
+        logger.error(f"Falha ao iniciar extensão: {e}")
+
+init_extension()
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""

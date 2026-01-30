@@ -53,40 +53,6 @@ class VdscConfig:
             'quality':quality
         }
 
-def init_lambda_extension():
-    # Se não estiver na AWS, ignora o registro da extensão
-    if not os.environ.get('AWS_LAMBDA_RUNTIME_API'):
-        logger.info("Ambiente local detectado. Extensão Lambda não será iniciada.")
-        return
-    try:
-        res = requests.post(
-            f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/register",
-            json={'events': ['INVOKE']},
-            headers={'Lambda-Extension-Name': 'InternalAsyncExt'}
-        )
-        ext_id = res.headers['Lambda-Extension-Identifier']
-        threading.Thread(target=process_async_loop, args=(ext_id,), daemon=True).start()
-    except Exception as e:
-        logger.error(f"Falha ao iniciar extensão: {e}")
-
-
-def process_async_loop(ext_id):
-    """Loop da extensão que mantém a Lambda viva até processar a fila"""
-    while True:
-        requests.get(f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",headers={'Lambda-Extension-Identifier': ext_id},
-            timeout=None
-        )
-        try:
-            # Processa o que está na fila antes de liberar o congelamento
-            while not async_events_queue.empty():
-                task_func, data = async_events_queue.get_nowait()
-                task_func(data)
-                async_events_queue.task_done()
-        except Exception as e:
-            logger.error(f"Erro no background: {e}")
-
-
-
 # Configurações e repositórios
 config = VdscConfig()
 

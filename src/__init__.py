@@ -2,7 +2,7 @@
 from .aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 # Configurações
-from .aws.config.vdsc_config import VdscConfig, async_events_queue, init_lambda_extension, config, dynamodb_repository, s3_repository, event_producer, vdsc_handler
+from .aws.config.vdsc_config import VdscConfig, async_events_queue, config, dynamodb_repository, s3_repository, event_producer, vdsc_handler
 
 # DataProxy
 from .aws.dataproxy.vdsc_dataproxy import VdscDataProxy
@@ -36,7 +36,6 @@ __all__ = [
     # Configurações
     'VdscConfig',
     'async_events_queue',
-    'init_lambda_extension',
     'config',
     'dynamodb_repository',
     's3_repository',
