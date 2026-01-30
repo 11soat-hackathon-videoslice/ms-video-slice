@@ -7,6 +7,9 @@ import json
 # Adicionar path (se necessário)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+class FakeContext:
+    def get_remaining_time_in_millis(self):
+        return 30000
 # ============================================================
 # EXEMPLO 1: Atualizar Metadados Completos
 # ============================================================
@@ -35,7 +38,7 @@ def exemplo_atualizacao_completa():
     print(f"{'='*60}\n")
 
     try:
-        result = lambda_handler(event, context)
+        result = lambda_handler(event, FakeContext())
         print(f"\n{'='*60}")
         print("Processamento finalizado com sucesso!")
         print("="*60)

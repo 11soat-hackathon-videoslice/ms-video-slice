@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 import requests
 from aws_lambda_powertools.utilities.data_classes import DynamoDBStreamEvent
+from aws_lambda_powertools.utilities.data_classes.dynamo_db_stream_event import DynamoDBRecord
 from aws_lambda_powertools.utilities.idempotency import (IdempotencyConfig, DynamoDBPersistenceLayer, idempotent_function)
 
 # Importação de dependências via módulo vdsc_config
@@ -18,15 +19,14 @@ idempotent_config = IdempotencyConfig(event_key_jmespath="eventID", use_local_ca
 
 def process_async_loop(ext_id):
     """Loop da extensão que mantém a Lambda viva até processar a fila"""
+    # Avisa a AWS: 'Pode mandar o próximo evento ou me congelar'
+    # Mas a extensão só faz isso quando a fila interna esvaziar
+    requests.get(
+        f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
+        headers={'Lambda-Extension-Identifier': ext_id},
+        timeout=None
+    )
     while True:
-        # Avisa a AWS: 'Pode mandar o próximo evento ou me congelar'
-        # Mas a extensão só faz isso quando a fila interna esvaziar
-        requests.get(
-            f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
-            headers={'Lambda-Extension-Identifier': ext_id},
-            timeout=None
-        )
-
         try:
             # Processa o que está na fila antes de liberar o congelamento
             while not async_events_queue.empty():
@@ -71,12 +71,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     records = list(DynamoDBStreamEvent(event).records)
     for record in records:
-        process_new_event(record=record)
+        process_new_event(record_raw=record.raw_event)
 
     return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
 
-@idempotent_function(persistence_store=persistence_layer,config=idempotent_config,data_keyword_argument="record")
-def process_new_event(record):
+@idempotent_function(persistence_store=persistence_layer,config=idempotent_config,data_keyword_argument="record_raw")
+def process_new_event(record_raw):
+    record = DynamoDBRecord(record_raw)
     logger.info(f"Enfileirando evento {record.event_id} do video {record.dynamodb.new_image.get('videoId')}")
     async_events_queue.put((_process_video_event, record))
 

@@ -4,6 +4,18 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 from app import lambda_handler, process_async_loop, init_extension, process_new_event, _process_video_event
 
+mock_idempotent_func = MagicMock(side_effect=lambda **kwargs: lambda func: func)
+
+with patch("aws_lambda_powertools.utilities.idempotency.idempotent_function", mock_idempotent_func):
+    from app import lambda_handler, process_new_event, process_async_loop # Agora o app importa o mock
+
+@pytest.fixture
+def lambda_context():
+    """Gera um mock do contexto da Lambda com tempo restante"""
+    context = MagicMock()
+    context.get_remaining_time_in_millis.return_value = 30000
+    return context
+
 
 @pytest.mark.unit
 class TestLambdaHandler:
@@ -80,25 +92,40 @@ class TestLambdaHandler:
 
 class TestAppInternals:
     def test_process_async_loop_handles_queue_and_errors(self):
+        # 1. Usamos BaseException porque seu código captura 'Exception'
+        # BaseException não é capturada por 'except Exception:'
+        class ExitLoop(BaseException): pass
+
         mock_queue = MagicMock()
-        # O loop executa uma vez: False (entra), True (sai)
+        # Simula 1 item na fila, depois vazia
         mock_queue.empty.side_effect = [False, True]
-        mock_queue.get_nowait.return_value = (lambda x: x, 'data')
-        call_count = {'count': 0}
-        def stop_after_first_call(*args, **kwargs):
-            call_count['count'] += 1
-            if call_count['count'] > 1:
-                raise StopIteration()
+        # Retorna uma função que não faz nada e um dado
+        mock_queue.get_nowait.return_value = (lambda x: None, 'data_teste')
+
+        mock_requests_get = MagicMock()
+        # 1ª chamada (fora do loop) -> Sucesso
+        # 2ª chamada (dentro do loop) -> Sai do loop à força
+        mock_requests_get.side_effect = [MagicMock(), ExitLoop()]
+
         with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-             patch('app.async_events_queue', mock_queue), \
-             patch('app.requests.get', side_effect=stop_after_first_call), \
-             patch('app.logger') as mock_logger:
+                patch('app.async_events_queue', mock_queue), \
+                patch('app.requests.get', mock_requests_get), \
+                patch('app.logger'):
+
             try:
                 process_async_loop('extid')
-            except StopIteration:
+            except ExitLoop:
+                # Agora o teste consegue sair do while True!
                 pass
+
+            # Verificações
             assert mock_queue.get_nowait.called
-            # Não é obrigatório erro, pode ser só info
+            # Verifica se chamou o get fora e o get dentro do loop
+            assert mock_requests_get.call_count == 2
+
+
+
+
 
     def test_init_extension_no_env(self):
         with patch.dict('os.environ', {}, clear=True), \
@@ -144,3 +171,11 @@ class TestAppInternals:
             _process_video_event(record)
             assert mock_logger.error.called
             mock_controller.handler.handle_exception.assert_called()
+
+
+
+
+
+
+
+
