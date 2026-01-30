@@ -1,7 +1,5 @@
-import json, os, queue, threading, requests
+import json, os
 
-from concurrent.futures import ThreadPoolExecutor
-from aws_lambda_powertools import Logger
 from aws.datasources.database.dynamodb_repository import DynamoDBRepository
 from aws.datasources.storage.s3_repository import S3StorageRepository
 from aws.datasources.producer.event_producer import EventProducer
@@ -9,9 +7,6 @@ from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
 
 from core.adapters.vdsc_controller import VdscController
 from aws.handler.vdsc_exception_handler import VdscExceptionHandler
-
-logger = Logger()
-# Ver instanciamentos na parte inferior do arquivo
 
 class VdscConfig:
     _instance = None
@@ -46,8 +41,6 @@ class VdscConfig:
             'table_name': os.getenv('DYNAMODB_TABLE_NAME', 'VideoSlice')
         }
         self.vdsc = {
-            'max_workers': int(os.getenv('VDSC_MAX_WORKERS', '5')),
-            'max_timeout': int(os.getenv('VDSC_MAX_TIMEOUT', '300')),
             'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
             'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
             'quality':quality
@@ -60,15 +53,9 @@ dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.a
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()
 vdsc_handler = VdscExceptionHandler()
-async_events_queue = queue.Queue()
 
 
 # DataProxy e Controller globais (garante passagem pela camada Controller)
 dataproxy = VdscDataProxy(dynamodb=dynamodb_repository, s3=s3_repository, event_producer=event_producer)
 controller = VdscController(dataproxy=dataproxy, handler=vdsc_handler)
-
-# Configuração do executor de threads para processamento paralelo
-executor = ThreadPoolExecutor(max_workers=config.vdsc['max_workers'])
-max_timeout = config.vdsc['max_timeout']
-
 

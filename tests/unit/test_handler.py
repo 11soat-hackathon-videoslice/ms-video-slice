@@ -42,11 +42,16 @@ class TestVdscProcessHandler:
     def test_handler_success(self, valid_dynamodb_event):
         """Testa handler com sucesso (processamento síncrono)"""
         context = Mock()
-        result = lambda_handler(valid_dynamodb_event, context)
-        assert result['statusCode'] == 202
-        body = json.loads(result['body'])
-        assert 'status' in body
-        assert 'Recebido' in body['status']
+        from unittest.mock import patch
+        with patch('app.DynamoDBStreamEvent') as mock_stream_event:
+            mock_record = Mock()
+            mock_record.raw_event = {'detail': {}}
+            mock_stream_event.return_value = mock_record
+            result = lambda_handler(valid_dynamodb_event, context)
+            assert result['statusCode'] == 202
+            body = json.loads(result['body'])
+            assert 'status' in body
+            assert 'Recebido' in body['status']
 
     def test_handler_with_invalid_event(self, valid_dynamodb_event):
         """Testa handler com evento inválido (sem Records)"""
@@ -61,11 +66,13 @@ class TestVdscProcessHandler:
     def test_handler_with_processing_error(self, valid_dynamodb_event):
         """Testa handler com evento válido (não há invoke, só processamento local)"""
         context = Mock()
-        result = lambda_handler(valid_dynamodb_event, context)
-        assert result['statusCode'] == 202
-        body = json.loads(result['body'])
-        assert 'status' in body
-        assert 'Recebido' in body['status']
+        # Patch para simular exceção interna durante o processamento
+        from unittest.mock import patch
+        with patch('app._process_video_event', side_effect=Exception('fail')):
+            result = lambda_handler(valid_dynamodb_event, context)
+            assert result['statusCode'] == 500
+            body = json.loads(result['body'])
+            assert 'error' in body
 
     def test_handler_with_empty_records(self):
         """Testa handler com lista de registros vazia"""

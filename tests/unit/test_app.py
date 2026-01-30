@@ -6,12 +6,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 import pytest
 import json
 from unittest.mock import Mock, patch, MagicMock
-from src.app import init_extension, _process_video_event
+from src.app import _process_video_event
 
 mock_idempotent_func = MagicMock(side_effect=lambda **kwargs: lambda func: func)
 
 with patch("aws_lambda_powertools.utilities.idempotency.idempotent_function", mock_idempotent_func):
-    from src.app import lambda_handler, process_async_loop # Agora o app importa o mock
+    from src.app import lambda_handler
 
 @pytest.fixture
 def lambda_context():
@@ -58,11 +58,14 @@ class TestLambdaHandler:
     def test_lambda_handler_success(self, valid_dynamodb_event):
         """Testa lambda_handler com sucesso (processamento síncrono)"""
         context = Mock()
-        result = lambda_handler(valid_dynamodb_event, context)
-        assert result['statusCode'] == 202
-        body = json.loads(result['body'])
-        assert 'status' in body
-        assert 'Recebido' in body['status']
+        # Patch para evitar processar internamente e simular sucesso
+        with patch('src.app._process_video_event') as mock_process_event:
+            mock_process_event.return_value = None
+            result = lambda_handler(valid_dynamodb_event, context)
+            assert result['statusCode'] == 202
+            body = json.loads(result['body'])
+            assert 'status' in body
+            assert 'Recebido' in body['status']
 
     def test_lambda_handler_with_empty_records(self):
         """Testa lambda_handler com lista de registros vazia"""
@@ -85,54 +88,17 @@ class TestLambdaHandler:
         assert 'Recebido' in body['status']
 
     def test_lambda_handler_invoke_exception(self, valid_dynamodb_event):
-        """Testa lambda_handler com evento válido (não há invoke, só processamento local)"""
+        """Testa lambda_handler com evento válido e falha no processamento interno"""
         context = Mock()
-        result = lambda_handler(valid_dynamodb_event, context)
-        assert result['statusCode'] == 202
-        body = json.loads(result['body'])
-        assert 'status' in body
-        assert 'Recebido' in body['status']
+        # Patch para simular exceção durante processamento
+        with patch('src.app._process_video_event', side_effect=Exception('fail')):
+            result = lambda_handler(valid_dynamodb_event, context)
+            assert result['statusCode'] == 500
+            body = json.loads(result['body'])
+            assert 'error' in body
 
 
 class TestAppInternals:
-    def test_process_async_loop_handles_queue_and_errors(self):
-        class ExitLoop(BaseException): pass
-        mock_queue = MagicMock()
-        mock_queue.empty.side_effect = [False, True]
-        mock_queue.get_nowait.return_value = (lambda x: None, 'data_teste')
-        mock_requests_get = MagicMock()
-        mock_requests_get.side_effect = [MagicMock(), ExitLoop()]
-        with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-                patch('src.app.async_events_queue', mock_queue), \
-                patch('src.app.requests.get', mock_requests_get), \
-                patch('src.app.logger'):
-            try:
-                process_async_loop('extid')
-            except ExitLoop:
-                pass
-            assert mock_queue.get_nowait.called
-            assert mock_requests_get.call_count == 2
-
-    def test_init_extension_no_env(self):
-        with patch.dict('os.environ', {}, clear=True), \
-             patch('src.app.logger') as mock_logger:
-            init_extension()
-            mock_logger.info.assert_called_with('AWS_LAMBDA_RUNTIME_API não está definido. A extensão não será iniciada.')
-
-    def test_init_extension_success(self):
-        with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-             patch('src.app.requests.post') as mock_post, \
-             patch('src.app.threading.Thread') as mock_thread:
-            mock_post.return_value.headers = {'Lambda-Extension-Identifier': 'extid'}
-            init_extension()
-            assert mock_thread.called
-
-    def test_init_extension_exception(self):
-        with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-             patch('src.app.requests.post', side_effect=Exception('fail')), \
-             patch('src.app.logger') as mock_logger:
-            init_extension()
-            assert mock_logger.error.called
 
     def test__process_video_event_success(self):
         record = MagicMock()

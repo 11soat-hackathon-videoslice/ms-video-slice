@@ -1,3 +1,3 @@
-from .vdsc_config import VdscConfig, controller, config, async_events_queue
+from .vdsc_config import VdscConfig, controller, config
 
-__all__ = ['VdscConfig', 'controller', 'config', 'async_events_queue']
+__all__ = ['VdscConfig', 'controller', 'config']
