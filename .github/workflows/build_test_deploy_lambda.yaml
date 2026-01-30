@@ -289,7 +289,9 @@ jobs:
             --environment file://env-vars.json \
             --handler app.lambda_handler \
             --timeout 30 \
-            --memory-size 512 \
+            --memory-size 1769 \
+            --architectures arm64 \
+            --ephemeral-storage Size=512 \
             --no-cli-pager
           
           # Limpar arquivo temporário
