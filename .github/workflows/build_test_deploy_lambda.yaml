@@ -175,7 +175,7 @@ jobs:
           echo "✅ Credenciais AWS configuradas corretamente"
 
       - name: Instalar AWS CLI V2
-        uses: [unimatrix-z/setup-aws-cli@v2](https://github.com)
+        uses: unimatrix-z/setup-aws-cli@v2
 
       - name: Preparar pacote de build-and-deploy
         run: |
