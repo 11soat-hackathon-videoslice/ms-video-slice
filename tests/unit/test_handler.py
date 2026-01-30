@@ -42,16 +42,12 @@ class TestVdscProcessHandler:
     def test_handler_success(self, valid_dynamodb_event):
         """Testa handler com sucesso (processamento síncrono)"""
         context = Mock()
-        from unittest.mock import patch
-        with patch('app.DynamoDBStreamEvent') as mock_stream_event:
-            mock_record = Mock()
-            mock_record.raw_event = {'detail': {}}
-            mock_stream_event.return_value = mock_record
-            result = lambda_handler(valid_dynamodb_event, context)
-            assert result['statusCode'] == 202
-            body = json.loads(result['body'])
-            assert 'status' in body
-            assert 'Recebido' in body['status']
+        # Chamada direta sem patch desnecessário
+        result = lambda_handler(valid_dynamodb_event, context)
+        assert result['statusCode'] == 202
+        body = json.loads(result['body'])
+        assert 'status' in body
+        assert 'Recebido' in body['status']
 
     def test_handler_with_invalid_event(self, valid_dynamodb_event):
         """Testa handler com evento inválido (sem Records)"""
