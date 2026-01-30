@@ -31,10 +31,19 @@ def process_async_loop(ext_id):
             # Processa o que está na fila antes de liberar o congelamento
             while not async_events_queue.empty():
                 task_func, data = async_events_queue.get_nowait()
-                task_func(data)
-                async_events_queue.task_done()
+                try:
+                    task_func(data)
+                except Exception as e:
+                    logger.error(f"Erro ao processar tarefa assíncrona {e}")
+                finally:
+                    async_events_queue.task_done()
+            requests.get(f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
+                        headers={'Lambda-Extension-Identifier': ext_id},
+                        timeout=None
+                         )
         except Exception as e:
-            logger.error(f"Erro no background: {e}")
+            logger.error(f"Erro no loop da extensão: {e}")
+
 
 # Registro da Extensão no Warm Start
 def init_extension():
