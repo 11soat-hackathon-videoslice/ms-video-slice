@@ -5,7 +5,7 @@ from aws_lambda_powertools.utilities.data_classes import DynamoDBStreamEvent
 from aws_lambda_powertools.utilities.idempotency import (IdempotencyConfig, DynamoDBPersistenceLayer, idempotent_function)
 
 # Importação de dependências via módulo vdsc_config
-from .aws.config.vdsc_config import controller, config, async_events_queue
+from aws.config.vdsc_config import controller, config, async_events_queue
 from core.dtos import VdscMetadataDTO
 
 logging.basicConfig(level=logging.INFO)
