@@ -1,5 +1,4 @@
-import json, logging, threading, os
-import queue
+import json, logging, threading, os, shutil, queue
 from typing import Dict, Any
 
 import requests
@@ -24,12 +23,17 @@ def process_async_loop(ext_id):
     """Loop da extensão que mantém a Lambda viva até processar a fila"""
 
     logger.info("Iniciando loop da extensão...")
-    requests.get(
-        f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
-        headers={'Lambda-Extension-Identifier': ext_id},
-        timeout=None
-    )
-    logger.info("Extensão iniciada e aguardando eventos...")
+    try:
+        requests.get(
+            f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
+            headers={'Lambda-Extension-Identifier': ext_id},
+            timeout=None
+        )
+        logger.info("Extensão iniciada e aguardando eventos...")
+    except Exception as e:
+        logger.error(f"Erro ao conectar com Lambda Runtime API no init: {e}")
+        return
+
     while True:
         try:
             logger.info("Aguardando eventos assíncronos na fila...")
@@ -40,7 +44,7 @@ def process_async_loop(ext_id):
                     logger.info("Executando tarefa assíncrona...")
                     task_func(data)
                 except Exception as e:
-                    logger.error(f"Erro ao processar tarefa assíncrona {e}")
+                    logger.error(f"Erro ao processar tarefa assíncrona: {e}", exc_info=True)
                 finally:
                     logger.info("Finalizando fila de tarefas assíncrona...")
                     async_events_queue.task_done()
@@ -48,14 +52,18 @@ def process_async_loop(ext_id):
 
             logger.info("Antes de aguardar próximo evento...")
 
-            requests.get(f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
-                        headers={'Lambda-Extension-Identifier': ext_id},
-                        timeout=None
-                         )
+            response = requests.get(
+                f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/event/next",
+                headers={'Lambda-Extension-Identifier': ext_id},
+                timeout=None
+            )
+            logger.info(f"Próximo evento recebido. Status: {response.status_code}")
 
-            logger.info("Extensão aguardando próximo evento...")
         except Exception as e:
-            logger.error(f"Erro no loop da extensão: {e}")
+            logger.error(f"Erro no loop da extensão: {e}", exc_info=True)
+            # Aguarda um pouco antes de tentar novamente
+            import time
+            time.sleep(1)
 
 
 # Registro da Extensão no Warm Start
@@ -70,32 +78,54 @@ def init_extension():
         res = requests.post(
             f"http://{os.environ['AWS_LAMBDA_RUNTIME_API']}/2020-01-01/extension/register",
             json={'events': ['INVOKE']},
-            headers={'Lambda-Extension-Name': 'InternalAsyncExt'}
+            headers={'Lambda-Extension-Name': 'InternalAsyncExt'},
+            timeout=5
         )
+
+        logger.info(f"Resposta do registro: Status Code={res.status_code}, Headers={res.headers}")
+
+        # Verificar a chave correta do header
+        if 'Lambda-Extension-Identifier' not in res.headers:
+            logger.error(f"Header 'Lambda-Extension-Identifier' não encontrado. Headers disponíveis: {list(res.headers.keys())}")
+            return
+
         ext_id = res.headers['Lambda-Extension-Identifier']
-        logger.info("Extensão registrada com sucesso.")
+        logger.info(f"Extensão registrada com sucesso. ID: {ext_id}")
         threading.Thread(target=process_async_loop, args=(ext_id,), daemon=True).start()
+    except requests.exceptions.Timeout:
+        logger.error("Timeout ao registrar extensão na AWS Lambda")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro de requisição ao iniciar extensão: {e}", exc_info=True)
     except Exception as e:
-        logger.error(f"Falha ao iniciar extensão: {e}")
+        logger.error(f"Falha ao iniciar extensão: {e}", exc_info=True)
 
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
+    logger.info("=== Iniciando Lambda Handler ===")
     init_extension()
     logger.info(f"Recebido evento do DynamoDB: {json.dumps(event)}")
     idempotent_config.register_lambda_context(context)
 
-    records = list(DynamoDBStreamEvent(event).records)
-    for record in records:
-        process_new_event(record_raw=record.raw_event)
+    try:
+        records = list(DynamoDBStreamEvent(event).records)
+        logger.info(f"Total de registros a processar: {len(records)}")
 
-    return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
+        for idx, record in enumerate(records):
+            logger.info(f"Processando registro {idx + 1}/{len(records)}")
+            process_new_event(record_raw=record.raw_event)
+
+        return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
+    except Exception as e:
+        logger.error(f"Erro ao processar eventos do DynamoDB: {e}", exc_info=True)
+        return {'statusCode': 500, 'body': json.dumps({"error": str(e)})}
 
 @idempotent_function(persistence_store=persistence_layer,config=idempotent_config,data_keyword_argument="record_raw")
 def process_new_event(record_raw):
     record = DynamoDBRecord(record_raw)
-    logger.info(f"Enfileirando evento {record.event_id} do video {record.dynamodb.new_image.get('videoId')}")
+    video_id = record.dynamodb.new_image.get('videoId', 'desconhecido')
+    logger.info(f"Enfileirando evento {record.event_id} do video {video_id}")
     async_events_queue.put((_process_video_event, record))
 
 def _process_video_event(record):
@@ -110,18 +140,20 @@ def _process_video_event(record):
 
     except Exception as e:
         video_id = vdsc_metadata.video_id if vdsc_metadata else 'desconhecido'
-        logger.error(f"Erro ao processar vídeo ID: {video_id} - {str(e)}")
-        controller.handler.handle_exception(e, vdsc_metadata)
+        logger.error(f"Erro ao processar vídeo ID: {video_id} - {str(e)}", exc_info=True)
+        try:
+            controller.handler.handle_exception(e, vdsc_metadata)
+        except Exception as handler_error:
+            logger.error(f"Erro ao processar exception handler: {handler_error}", exc_info=True)
     finally:
         _clean_file_system()
 
 def _clean_file_system():
-    import shutil
-    import os
     for filename in os.listdir('/tmp'):
         file_path = os.path.join('/tmp', filename)
         try:
             logger.info(f"Removendo {file_path}")
             if os.path.isfile(file_path): os.unlink(file_path)
             elif os.path.isdir(file_path): shutil.rmtree(file_path)
-        except Exception: pass
+        except Exception as e:
+            logger.warning(f"Não foi possível remover {file_path}: {e}")

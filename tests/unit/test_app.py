@@ -1,13 +1,17 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
+
 """Testes unitários para app.py - Lambda Handler com processamento assíncrono"""
 import pytest
 import json
 from unittest.mock import Mock, patch, MagicMock
-from app import lambda_handler, process_async_loop, init_extension, process_new_event, _process_video_event
+from src.app import init_extension, _process_video_event
 
 mock_idempotent_func = MagicMock(side_effect=lambda **kwargs: lambda func: func)
 
 with patch("aws_lambda_powertools.utilities.idempotency.idempotent_function", mock_idempotent_func):
-    from app import lambda_handler, process_new_event, process_async_loop # Agora o app importa o mock
+    from src.app import lambda_handler, process_async_loop # Agora o app importa o mock
 
 @pytest.fixture
 def lambda_context():
@@ -92,69 +96,56 @@ class TestLambdaHandler:
 
 class TestAppInternals:
     def test_process_async_loop_handles_queue_and_errors(self):
-        # 1. Usamos BaseException porque seu código captura 'Exception'
-        # BaseException não é capturada por 'except Exception:'
         class ExitLoop(BaseException): pass
-
         mock_queue = MagicMock()
-        # Simula 1 item na fila, depois vazia
         mock_queue.empty.side_effect = [False, True]
-        # Retorna uma função que não faz nada e um dado
         mock_queue.get_nowait.return_value = (lambda x: None, 'data_teste')
-
         mock_requests_get = MagicMock()
-        # 1ª chamada (fora do loop) -> Sucesso
-        # 2ª chamada (dentro do loop) -> Sai do loop à força
         mock_requests_get.side_effect = [MagicMock(), ExitLoop()]
-
         with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-                patch('app.async_events_queue', mock_queue), \
-                patch('app.requests.get', mock_requests_get), \
-                patch('app.logger'):
-
+                patch('src.app.async_events_queue', mock_queue), \
+                patch('src.app.requests.get', mock_requests_get), \
+                patch('src.app.logger'):
             try:
                 process_async_loop('extid')
             except ExitLoop:
-                # Agora o teste consegue sair do while True!
                 pass
-
-            # Verificações
             assert mock_queue.get_nowait.called
-            # Verifica se chamou o get fora e o get dentro do loop
             assert mock_requests_get.call_count == 2
-
-
-
-
 
     def test_init_extension_no_env(self):
         with patch.dict('os.environ', {}, clear=True), \
-             patch('app.logger') as mock_logger:
+             patch('src.app.logger') as mock_logger:
             init_extension()
             mock_logger.info.assert_called_with('AWS_LAMBDA_RUNTIME_API não está definido. A extensão não será iniciada.')
 
     def test_init_extension_success(self):
         with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-             patch('app.requests.post') as mock_post, \
-             patch('app.threading.Thread') as mock_thread:
+             patch('src.app.requests.post') as mock_post, \
+             patch('src.app.threading.Thread') as mock_thread:
             mock_post.return_value.headers = {'Lambda-Extension-Identifier': 'extid'}
             init_extension()
             assert mock_thread.called
 
     def test_init_extension_exception(self):
         with patch.dict('os.environ', {'AWS_LAMBDA_RUNTIME_API': 'localhost'}), \
-             patch('app.requests.post', side_effect=Exception('fail')), \
-             patch('app.logger') as mock_logger:
+             patch('src.app.requests.post', side_effect=Exception('fail')), \
+             patch('src.app.logger') as mock_logger:
             init_extension()
             assert mock_logger.error.called
 
     def test__process_video_event_success(self):
         record = MagicMock()
         record.dynamodb.new_image = {'videoId': 'vid'}
-        with patch('app.VdscMetadataDTO.from_dynamodb_item') as mock_from, \
-             patch('app.controller') as mock_controller, \
-             patch('app.config') as mock_config, \
-             patch('app.logger') as mock_logger:
+        with patch('src.app.VdscMetadataDTO.from_dynamodb_item') as mock_from, \
+             patch('src.app.controller') as mock_controller, \
+             patch('src.app.config') as mock_config, \
+             patch('src.app.logger') as mock_logger, \
+             patch('os.listdir', return_value=[]), \
+             patch('os.path.isfile', return_value=False), \
+             patch('os.path.isdir', return_value=False), \
+             patch('os.unlink'), \
+             patch('shutil.rmtree'):
             mock_metadata = MagicMock()
             mock_metadata.video_id = 'vid'
             mock_from.return_value = mock_metadata
@@ -165,17 +156,14 @@ class TestAppInternals:
     def test__process_video_event_exception(self):
         record = MagicMock()
         record.dynamodb.new_image = {'videoId': 'vid'}
-        with patch('app.VdscMetadataDTO.from_dynamodb_item', side_effect=Exception('fail')), \
-             patch('app.controller') as mock_controller, \
-             patch('app.logger') as mock_logger:
+        with patch('src.app.VdscMetadataDTO.from_dynamodb_item', side_effect=Exception('fail')), \
+             patch('src.app.controller') as mock_controller, \
+             patch('src.app.logger') as mock_logger, \
+             patch('os.listdir', return_value=[]), \
+             patch('os.path.isfile', return_value=False), \
+             patch('os.path.isdir', return_value=False), \
+             patch('os.unlink'), \
+             patch('shutil.rmtree'):
             _process_video_event(record)
             assert mock_logger.error.called
             mock_controller.handler.handle_exception.assert_called()
-
-
-
-
-
-
-
-
