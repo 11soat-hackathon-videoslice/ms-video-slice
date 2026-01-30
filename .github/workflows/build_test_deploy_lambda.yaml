@@ -174,11 +174,20 @@ jobs:
           aws sts get-caller-identity
           echo "✅ Credenciais AWS configuradas corretamente"
 
+      - name: Cache AWS CLI v2
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/aws-cli/v2
+          key: aws-cli-v2-${{ runner.os }}
+          restore-keys: |
+            aws-cli-v2-
+
       - name: Instalar AWS CLI V2
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install --update
+          aws --version
 
       - name: Preparar pacote de build-and-deploy
         run: |
@@ -297,7 +306,6 @@ jobs:
             --timeout 30 \
             --memory-size 1769 \
             --ephemeral-storage Size=512 \
-            --architectures arm64 \
             --no-cli-pager
           
           # Limpar arquivo temporário
