@@ -56,7 +56,7 @@ class VdscConfig:
 def init_lambda_extension():
     # Se não estiver na AWS, ignora o registro da extensão
     if not os.environ.get('AWS_LAMBDA_RUNTIME_API'):
-        logger.warning("Ambiente local detectado. Extensão Lambda não será iniciada.")
+        logger.info("Ambiente local detectado. Extensão Lambda não será iniciada.")
         return
     try:
         res = requests.post(
@@ -89,7 +89,7 @@ def process_async_loop(ext_id):
 
 # Configurações e repositórios
 config = VdscConfig()
-init_lambda_extension()
+
 dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()

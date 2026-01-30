@@ -5,11 +5,12 @@ from aws_lambda_powertools.utilities.data_classes import DynamoDBStreamEvent
 from aws_lambda_powertools.utilities.idempotency import (IdempotencyConfig, DynamoDBPersistenceLayer, idempotent_function)
 
 # Importação de dependências via módulo vdsc_config
-from aws.config.vdsc_config import controller, config, async_events_queue
+from aws.config.vdsc_config import controller, config, async_events_queue, init_lambda_extension
 from core.dtos import VdscMetadataDTO
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+init_lambda_extension()
 
 #Configuração da camada de persistência para idempotência
 persistence_layer  = DynamoDBPersistenceLayer(table_name="VideoSliceIdempotencyTable")
