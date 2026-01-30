@@ -33,8 +33,9 @@ def process_new_event(record):
     async_events_queue.put((_process_video_event, record))
 
 def _process_video_event(record):
-    try:
+    vdsc_metadata = None
 
+    try:
         new_image = record.dynamodb.new_image
         vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(new_image)
         logger.info(f"Processando vídeo ID: {vdsc_metadata.video_id}")
@@ -42,5 +43,6 @@ def _process_video_event(record):
         logger.info(f"Processamento concluído para vídeo ID: {vdsc_metadata.video_id}")
 
     except Exception as e:
-        logger.error(f"Erro ao processar vídeo ID: {vdsc_metadata.video_id} - {str(e)}")
+        video_id = vdsc_metadata.video_id if vdsc_metadata else 'desconhecido'
+        logger.error(f"Erro ao processar vídeo ID: {video_id} - {str(e)}")
         controller.handler.handle_exception(e, vdsc_metadata)
