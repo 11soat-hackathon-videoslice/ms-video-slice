@@ -175,11 +175,7 @@ jobs:
           echo "✅ Credenciais AWS configuradas corretamente"
 
       - name: Instalar AWS CLI V2
-        run: |
-          curl "https://awscli.amazonaws.com" -o "awscliv2.zip"
-          unzip -q awscliv2.zip
-          sudo ./aws/install --update
-          aws --version
+        uses: [unimatrix-z/setup-aws-cli@v2](https://github.com)
 
       - name: Preparar pacote de build-and-deploy
         run: |
