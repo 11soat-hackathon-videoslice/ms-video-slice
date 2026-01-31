@@ -10,10 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # ============================================================
 # EXEMPLO 1: Atualizar Metadados Completos
 # ============================================================
-def exemplo_atualizacao_completa():
+def teste_scheduler():
     """Exemplo de atualização completa de metadados no formato DynamoDB"""
     from src.app import lambda_handler
-    os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkx8zj81Eq9o.mp4 s3://vdsc-prd-s3-videos/uploads/mkx8zj81Eq9o.mp4')
+    #os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkx8zj81Eq9o.mp4 s3://vdsc-prd-s3-videos/uploads/mkx8zj81Eq9o.mp4')
 
     # Caminho do arquivo JSON com o evento do DynamoDB
     json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_insert.json')
@@ -53,4 +53,4 @@ if __name__ == "__main__":
     print("TESTE DO VDSC PROCESS HANDLER")
     print(f"{'='*60}\n")
 
-    exemplo_atualizacao_completa()
+    teste_scheduler()

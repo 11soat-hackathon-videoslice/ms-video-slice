@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 from ..domain.vdsc_metadata import VdscMetadata
 
@@ -32,9 +33,18 @@ class VdscGatewayInferface(ABC):
         pass
 
     @abstractmethod
-    def send_event(self, event_data: dict) -> None:
+    def send_schedule_retry_event(self, vdsc_metadata: VdscMetadata, schedule_time: datetime, schedule_config: dict) -> None:
         pass
 
     @abstractmethod
-    def update_metadata_by_video_id(self, update_data: VdscMetadata) -> VdscMetadata:
+    def send_notification(self, vdsc_metadata:VdscMetadata, channels: list[str], message: str) -> None:
         pass
+
+    @abstractmethod
+    def update_metadata(self, update_data: VdscMetadata) -> VdscMetadata:
+        pass
+
+
+
+
+

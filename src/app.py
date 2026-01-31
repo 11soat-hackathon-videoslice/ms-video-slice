@@ -11,15 +11,20 @@ logger = logging.getLogger(__name__)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
+
     logger.info("=== Iniciando Lambda Handler ===")
     logger.info(f"Recebido novo evento: {json.dumps(event)}")
+
     records = list(event.get('Records', []))
     logger.info(f"Total de registros a processar: {len(records)}")
+
     for record in records:
         try:
-
             dynamodb_metadata = record.get('dynamodb', {}).get('NewImage', {})
-            _process_video_event(dynamodb_metadata)
+            if not dynamodb_metadata:
+                dynamodb_metadata= record.get('body', {})
+            vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(dynamodb_metadata)
+            _process_video_event(vdsc_metadata)
 
         except Exception as e:
             logger.error(f"Erro ao processar eventos do DynamoDB: {e}", exc_info=True)
@@ -27,15 +32,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
 
-
-def _process_video_event(dynamodb_metadata):
-    vdsc_metadata = None
+def _process_video_event(vdsc_metadata):
 
     try:
-
-        vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(dynamodb_metadata)
         logger.info(f"Processando vídeo ID: {vdsc_metadata.video_id}")
-        controller.video_slice_processing(vdsc_metadata, config.vdsc)
+        controller.video_slice_processing(vdsc_metadata, config)
         logger.info(f"Processamento concluído para vídeo ID: {vdsc_metadata.video_id}")
 
     except Exception as e:

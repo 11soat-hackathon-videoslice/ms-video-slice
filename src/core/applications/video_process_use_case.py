@@ -12,7 +12,7 @@ from ..domain.vdsc_metadata import VdscMetadata, LogEntry
 from ..enums.vdsc_status_enum import VdscStatusEnum
 from ..exceptions.vdsc_exceptions import VdscException
 from ..interfaces.vdsc_exception_handler_interface import VdscExceptionHandlerInterface
-
+from ..utils import get_event_schedule_timestamp
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class VdscProcessUseCase:
                 vdsc_metadata.retries = retries
                 log_message = f"Reiniciando processamento do vídeo: {video_id}. Tentativa {retries} de {max_retries}."
                 vdsc_metadata = self._metadata_update_status(vdsc_metadata, VdscStatusEnum.RETRYING, LogEntry(log_message))
-            gateway.update_metadata_by_video_id(vdsc_metadata)
+            gateway.update_metadata(vdsc_metadata)
 
             # Movendo arquivo para área de processamento
             file_uploaded_path = self._get_path_file(path_type = 'uploads', video_id=video_id, extension_file=extension_file, config=config)
@@ -71,19 +71,23 @@ class VdscProcessUseCase:
 
             #Atualizando metadados para finalizado
             vdsc_metadata = self._metadata_update_status(vdsc_metadata, VdscStatusEnum.FINISHED, LogEntry("Processamento finalizado com sucesso."))
-            gateway.update_metadata_by_video_id(vdsc_metadata)
+            gateway.update_metadata(vdsc_metadata)
 
             logger.info(f"Processamento concluído com sucesso para o vídeo ID: {event.video_id}")
 
         except Exception as ex:
             logger.error(f"Erro ao processar o vídeo ID {event.video_id}: {str(ex)}", exc_info=ex)
+
             if retries == max_retries:
-                vdsc_metadata = self._metadata_update_status(vdsc_metadata, VdscStatusEnum.FAILED, LogEntry(f"Processamento falhou após {max_retries} tentativas."))
+                vdsc_metadata_error, message = self._set_exception_status(gateway, ex, vdsc_metadata, VdscStatusEnum.FAILED, config)
             else:
-                vdsc_metadata = self._metadata_update_status(vdsc_metadata, VdscStatusEnum.ERROR, LogEntry(f"Erro no processamento: {str(ex)}. Iniciando tentativa {retries+1} de {max_retries}."))
-            gateway.update_metadata_by_video_id(vdsc_metadata)
-            gateway.send_event(vdsc_metadata.to_dict())
-            raise VdscException(f"Erro ao processar o vídeo ID {event.video_id}: {str(ex)}", "ERROR", vdsc_metadata.to_dict())
+                vdsc_metadata_error, message = self._set_exception_status(gateway, ex, vdsc_metadata, VdscStatusEnum.RETRYING, config)
+
+            if vdsc_metadata_error:
+                vdsc_metadata = vdsc_metadata_error
+                gateway.update_metadata(vdsc_metadata_error)
+                gateway.send_notification(vdsc_metadata_error, ['email'], message)
+            raise VdscException(message, "ERROR", vdsc_metadata_error.to_dict())
 
     def _compress_images_to_zip(self, output_directory: str, zip_directory: str, gateway: VdscGatewayInferface,
                                 config: dict) -> None:
@@ -241,6 +245,23 @@ class VdscProcessUseCase:
             logger.error(f"Erro ao processar frames do vídeo ID {video_id}: {str(e)}", exc_info=e)
             raise
 
+    def _set_exception_status(self, gateway: VdscGatewayInferface, ex: Exception, vdsc_metadata: VdscMetadata, new_status: VdscStatusEnum, config: dict):
+        retries = vdsc_metadata.retries
+        max_retries = vdsc_metadata.max_retry
+
+        match new_status:
+            case VdscStatusEnum.FAILED:
+                message = f"Processamento do video {vdsc_metadata.video_id} falhou após {max_retries} tentativas: {str(ex)}."
+                vdsc_metadata = self._metadata_update_status(vdsc_metadata, new_status, LogEntry(f"Processamento falhou após {max_retries} tentativas."))
+                return vdsc_metadata, message
+            case VdscStatusEnum.RETRYING:
+                vdsc_metadata.retries += 1
+                message = f"Falha no processamento do video {vdsc_metadata.video_id}: {str(ex)}. Iniciando tentativa {retries+1} de {max_retries}."
+                vdsc_metadata = self._metadata_update_status(vdsc_metadata, new_status, LogEntry(message))
+                schedule_timestamp = get_event_schedule_timestamp(vdsc_metadata, retry_backoff_factor = config.vdsc['schedule_event_rules']['retry_backoff_factor'])
+                gateway.send_schedule_retry_event(vdsc_metadata, schedule_timestamp, config.vdsc['schedule_event_rules'])
+                return vdsc_metadata, message
+        return None
 
 
 
@@ -255,5 +276,3 @@ class VdscProcessUseCase:
 
 
 
-
-   

@@ -8,14 +8,17 @@ from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
 from core.adapters.vdsc_controller import VdscController
 from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
+#Varilável de ambiente VDSC_QUALITY esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
+quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
+schedule_event_rules = {
+    'retry_backoff_factor':  int(os.getenv('SCHEDULE_EVENT_RETRY_BACKOFF_FACTOR', '5')),
+    'retry_arn': os.getenv('SCHEDULE_EVENT_ROLE_ARN', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice'),
+    'retry_role_arn': os.getenv('SCHEDULE_EVENT_ROLE_ARN', 'arn:aws:iam::080145351546:role/vdsc-prd-schduler-role'),
+    'retry_dlq': os.getenv('SCHEDULE_EVENT_DLQ', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-dlq')
+}
+
 class VdscConfig:
     _instance = None
-
-    #Varilável de ambiente VDSC_QUALITY esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
-    quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
-    schedule_event_rules = {
-        'retry_backoff_factor ':  int(os.getenv('SCHEDULE_EVENT_RETRY_BACKOFF_FACTOR', '5')) # quantidade em minutos x número do retry
-    }
 
     def __new__(cls):
         if cls._instance is None:
@@ -23,7 +26,7 @@ class VdscConfig:
             cls._instance._initialize()
         return cls._instance
 
-    def _initialize(self, quality=quality):
+    def _initialize(self, quality = quality, schedule_event_rules = schedule_event_rules):
         self.aws = {
             'region': os.getenv('AWS_REGION', 'us-east-1'),
             'account_id': os.getenv('AWS_ACCOUNT_ID')}
@@ -47,7 +50,7 @@ class VdscConfig:
             'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
             'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
             'quality':quality,
-            'schedule_event_rules': self.schedule_event_rules
+            'schedule_event_rules': schedule_event_rules
         }
 
 # Configurações e repositórios

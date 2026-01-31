@@ -1,3 +1,5 @@
+import datetime
+
 from core.interfaces.vdsc_dataproxy_interface import VdscDataProxyInterface
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from aws.datasources.database.dynamodb_interface import DynamoDBInterface
@@ -32,8 +34,11 @@ class VdscDataProxy(VdscDataProxyInterface):
     def save_file(self, file_path: str, data: bytes) -> None:
         self.s3.save_file(file_path, data)
 
-    def send_event(self, event_data: dict) -> None:
-        self.event_producer.send_event(event_data)
+    def send_schedule_retry_event(self, vdsc_metadata: VdscMetadataDTO, schedule_time: datetime, schedule_config: dict) -> None:
+        self.event_producer.send_schedule_retry_event(vdsc_metadata.to_dynamodb_item(), schedule_time, schedule_config)
+
+    def send_notification(self, vdsc_metadata:VdscMetadataDTO, channels: list[str], message: str) -> None:
+        pass
 
     def update_metadata_by_video_id(self, update_data: VdscMetadataDTO) -> VdscMetadataDTO:
         """Atualiza metadados recebendo e retornando DTO"""

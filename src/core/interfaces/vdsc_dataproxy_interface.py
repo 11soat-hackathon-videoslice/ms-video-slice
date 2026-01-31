@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 from ..dtos.vdsc_metadata_dto import VdscMetadataDTO
 
@@ -32,7 +33,11 @@ class VdscDataProxyInterface(ABC):
         pass
 
     @abstractmethod
-    def send_event(self, event_data: dict) -> None:
+    def send_notification(self, vdsc_metadata:VdscMetadataDTO, channels: list[str], message: str) -> None:
+        pass
+
+    @abstractmethod
+    def send_schedule_retry_event(self, vdsc_metadata: VdscMetadataDTO, schedule_time: datetime, schedule_config: dict) -> None:
         pass
 
     @abstractmethod

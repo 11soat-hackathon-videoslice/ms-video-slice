@@ -84,18 +84,12 @@ class TestVdscGateway:
         gateway.save_file("test/file.txt", b"content")
         mock_dataproxy.save_file.assert_called_once_with("test/file.txt", b"content")
 
-    def test_send_event(self, gateway, mock_dataproxy):
-        """Testa envio de evento"""
-        event_data = {"event": "test"}
-        gateway.send_event(event_data)
-        mock_dataproxy.send_event.assert_called_once_with(event_data)
-
     def test_update_metadata_by_video_id(self, gateway, mock_dataproxy, valid_dto):
         """Testa atualização de metadados"""
         mock_metadata = VdscMetadata(dto=valid_dto)
         mock_dataproxy.update_metadata_by_video_id.return_value = valid_dto
 
-        result = gateway.update_metadata_by_video_id(mock_metadata)
+        result = gateway.update_metadata(mock_metadata)
 
         assert isinstance(result, VdscMetadata)
         mock_dataproxy.update_metadata_by_video_id.assert_called_once()
