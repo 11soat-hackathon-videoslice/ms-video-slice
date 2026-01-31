@@ -13,6 +13,9 @@ class VdscConfig:
 
     #Varilável de ambiente VDSC_QUALITY esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
     quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
+    schedule_event_rules = {
+        'retry_backoff_factor ':  int(os.getenv('SCHEDULE_EVENT_RETRY_BACKOFF_FACTOR', '5')) # quantidade em minutos x número do retry
+    }
 
     def __new__(cls):
         if cls._instance is None:
@@ -43,7 +46,8 @@ class VdscConfig:
         self.vdsc = {
             'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
             'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
-            'quality':quality
+            'quality':quality,
+            'schedule_event_rules': self.schedule_event_rules
         }
 
 # Configurações e repositórios

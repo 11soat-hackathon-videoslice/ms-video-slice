@@ -18,7 +18,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     for record in records:
         try:
 
-            dynamodb_metadata = record.get('detail', {}).get('dynamodb', {}).get('NewImage', {})
+            dynamodb_metadata = record.get('dynamodb', {}).get('NewImage', {})
             _process_video_event(dynamodb_metadata)
 
         except Exception as e:
