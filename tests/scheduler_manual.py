@@ -2,18 +2,20 @@ import sys
 import os
 import json
 
-from core.utils import get_event_schedule_timestamp
-from src import VdscMetadataDTO, VdscConfig, EventProducer
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../video-slice-core/src')))
 
-# Adicionar path (se necessário)
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from core.utils import get_event_schedule_timestamp
+from core.dtos import VdscMetadataDTO
+from aws.config import VdscConfig
+from aws.datasources.producer import EventProducer
+
 
 # ============================================================
 # Teste Producer
 # ============================================================
 def schueduler_manual():
     # Caminho do arquivo JSON com o evento do DynamoDB
-    json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_item_exemple.json')
+    json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_item_example.json')
     config = VdscConfig()
     # Ler o conteúdo do arquivo JSON
     print(f"Carregando evento do arquivo: {json_file_path}")

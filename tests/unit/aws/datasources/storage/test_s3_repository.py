@@ -1,6 +1,6 @@
 """Testes unitários para S3StorageRepository"""
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from src.aws.datasources.storage.s3_repository import S3StorageRepository
 
 

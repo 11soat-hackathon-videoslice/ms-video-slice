@@ -1,6 +1,6 @@
 """Testes unitários para VdscExceptionHandler"""
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from src.aws.handler.vdsc_exception_handler import VdscExceptionHandler
 from src.core.exceptions.vdsc_exceptions import VdscException
 

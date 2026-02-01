@@ -8,9 +8,6 @@ from aws.config.vdsc_config import VdscConfig
 from core.adapters.vdsc_gateway import VdscGateway
 
 from core.dtos import VdscMetadataDTO
-from core.adapters.vdsc_controller import VdscController
-from aws.handler.vdsc_exception_handler import VdscExceptionHandler
-
 
 from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 from src import VdscProcessUseCase, VdscMetadata

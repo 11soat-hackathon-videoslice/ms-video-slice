@@ -1,6 +1,6 @@
 """Testes unitários para DynamoDBRepository"""
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from src.aws.datasources.database.dynamodb_repository import DynamoDBRepository
 from src.core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 
@@ -254,7 +254,6 @@ class TestDynamoDBRepository:
 
     def test_update_metadata_with_exception_handling(self, repository, mock_dynamodb_client):
         """Testa tratamento de exceção durante atualização"""
-        from src.core.dtos.vdsc_metadata_dto import LogEntryDTO
 
         dto = VdscMetadataDTO(
             video_id='video_error',

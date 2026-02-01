@@ -1,6 +1,6 @@
 """Testes unitários para VdscDataProxy"""
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from src.aws.dataproxy.vdsc_dataproxy import VdscDataProxy, dict_to_dynamodb_format
 from src.core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 

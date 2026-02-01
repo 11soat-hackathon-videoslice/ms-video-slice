@@ -1,6 +1,5 @@
 """Testes unitários para EventProducer"""
 import pytest
-from src.aws.datasources.producer.event_producer import EventProducer
 
 
 @pytest.mark.unit
