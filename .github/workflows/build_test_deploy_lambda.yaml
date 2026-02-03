@@ -43,6 +43,7 @@ env:
   VDSC_MAX_WORKERS: ${{ vars.VDSC_MAX_WORKERS }}
   VDSC_MAX_TIMEOUT: ${{ vars.VDSC_MAX_TIMEOUT }}
   AWS_LAMBDA_LOG_LEVEL: ${{ vars.AWS_LAMBDA_LOG_LEVEL }}
+  VDSC_PAT: ${{ secrets.VDSC_PAT }}
 
 jobs:
   tests-and-coverage:
@@ -55,21 +56,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configurar SSH para autenticação com repositórios privados
+      - name: Configurar Autenticação HTTPS com PAT para repositórios privados
         run: |
-          echo "🔐 Configurando SSH para repositórios privados..."
+          echo "🔐 Configurando autenticação HTTPS com PAT..."
           
-          # Criar diretório .ssh se não existir
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          # Verificar se VDSC_PAT foi configurado
+          if [ -z "${{ secrets.VDSC_PAT }}" ]; then
+            echo "❌ ERRO: VDSC_PAT não configurado"
+            exit 1
+          else
+            echo "✅ VDSC_PAT detectado"
+            # Configurar git com autenticação HTTPS usando PAT
+            
+            git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "ssh://git@github.com/"
+            git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "git@github.com:"
+            git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "https://github.com/"
           
-          # Adicionar GitHub ao known_hosts para evitar prompts interativos
-          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          # Configurar git para usar SSH
-          git config --global url."git@github.com:".insteadOf "https://github.com/"
-          
-          echo "✅ Configuração SSH concluída"
+            echo "✅ Autenticação HTTPS com PAT configurada"
+          fi
 
       - name: Determinar branch do video-slice-core
         id: determine-branch
@@ -124,8 +128,8 @@ jobs:
           # Criar backup do arquivo original
           cp src/requirements.txt src/requirements.txt.backup
           
-          # Substituir a linha de vdsc-core no requirements.txt
-          sed -i "s|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@.*|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}|g" src/requirements.txt
+          # Substituir a linha de vdsc-core no requirements.txt (HTTPS com PAT)
+          sed -i "s|vdsc-core @ .*video-slice-core.*|vdsc-core @ git+https://github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}|g" src/requirements.txt
           
           echo "📋 Conteúdo atualizado de requirements.txt:"
           cat src/requirements.txt
@@ -133,7 +137,7 @@ jobs:
           # Validar que o arquivo foi atualizado corretamente
           echo ""
           echo "🔍 Validando requirements.txt..."
-          if grep -q "vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}" src/requirements.txt; then
+          if grep -q "vdsc-core @ git+https://github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}" src/requirements.txt; then
             echo "✅ Branch correta detectada no requirements.txt"
           else
             echo "❌ ERRO: Branch não foi atualizada corretamente em requirements.txt"
@@ -285,21 +289,20 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Configurar SSH para autenticação com repositórios privados
+      - name: Configurar Autenticação HTTPS com PAT para repositórios privados
         run: |
-          echo "🔐 Configurando SSH para repositórios privados..."
+          echo "🔐 Configurando autenticação HTTPS com PAT..."
           
-          # Criar diretório .ssh se não existir
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Adicionar GitHub ao known_hosts para evitar prompts interativos
-          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          # Configurar git para usar SSH
-          git config --global url."git@github.com:".insteadOf "https://github.com/"
-          
-          echo "✅ Configuração SSH concluída"
+          # Verificar se VDSC_PAT foi configurado
+          if [ -z "${{ secrets.VDSC_PAT }}" ]; then
+            echo "⚠️  Aviso: VDSC_PAT não configurado em Secrets"
+            echo "ℹ️  A pipeline tentará continuar sem autenticação"
+          else
+            echo "✅ VDSC_PAT detectado"
+            # Configurar git com autenticação HTTPS usando PAT
+            git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "https://github.com/"
+            echo "✅ Autenticação HTTPS com PAT configurada"
+          fi
 
       - name: Determinar branch do video-slice-core
         id: determine-branch
@@ -346,8 +349,8 @@ jobs:
           # Criar backup do arquivo original
           cp src/requirements.txt src/requirements.txt.backup
           
-          # Substituir a linha de vdsc-core no requirements.txt
-          sed -i "s|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@.*|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}|g" src/requirements.txt
+          # Substituir a linha de vdsc-core no requirements.txt (HTTPS com PAT)
+          sed -i "s|vdsc-core @ .*video-slice-core.*|vdsc-core @ git+https://github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}|g" src/requirements.txt
           
           echo "📋 Conteúdo atualizado de requirements.txt:"
           cat src/requirements.txt
@@ -355,7 +358,7 @@ jobs:
           # Validar que o arquivo foi atualizado corretamente
           echo ""
           echo "🔍 Validando requirements.txt..."
-          if grep -q "vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}" src/requirements.txt; then
+          if grep -q "vdsc-core @ git+https://github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}" src/requirements.txt; then
             echo "✅ Branch correta detectada no requirements.txt"
           else
             echo "❌ ERRO: Branch não foi atualizada corretamente em requirements.txt"
