@@ -67,11 +67,11 @@ jobs:
           else
             echo "✅ VDSC_PAT detectado"
             # Configurar git com autenticação HTTPS usando PAT
-            
+
             git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "ssh://git@github.com/"
             git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "git@github.com:"
             git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "https://github.com/"
-          
+
             echo "✅ Autenticação HTTPS com PAT configurada"
           fi
 
@@ -187,26 +187,79 @@ jobs:
       - name: Validar instalação do vdsc-core
         run: |
           echo "🔍 Validando instalação do vdsc-core..."
+          echo ""
+          echo "📋 Diretórios do site-packages:"
+          python -c "import site; print('\n'.join(site.getsitepackages()))"
+          echo ""
+          echo "🔍 Procurando por 'core' nos site-packages:"
+          python -c "import site; import os; [print(p) for sp in site.getsitepackages() for p in os.listdir(sp) if 'core' in p.lower()]" || echo "Nenhum 'core' encontrado diretamente"
+          echo ""
+          
           python << 'EOF'
+          import sys
+          import os
+          
+          print("🔍 Tentando importar core...")
+          
           try:
+              # Primeiro, verificar se o diretório core existe
+              import site
+              for sp in site.getsitepackages():
+                  core_path = os.path.join(sp, 'core')
+                  if os.path.exists(core_path):
+                      print(f"✅ Diretório 'core' encontrado em: {core_path}")
+                      print(f"   Conteúdo: {os.listdir(core_path)}")
+              
+              # Tentar importar
               import core
-              import vdsc_core
-              print("✅ vdsc-core importado com sucesso")
+              print("✅ vdsc-core importado com sucesso!")
               print(f"   Localização: {core.__file__}")
               
-              # Tentar obter versão se disponível
+              # Listar submódulos
+              import pkgutil
+              print("\n📦 Módulos disponíveis em core:")
+              modules = []
+              for importer, modname, ispkg in pkgutil.iter_modules(core.__path__):
+                  modules.append(modname)
+                  print(f"   - {modname}")
+              
+              if not modules:
+                  print("   (nenhum submódulo encontrado)")
+              
+              # Versão
               if hasattr(core, '__version__'):
-                  print(f"   Versão: {core.__version__}")
+                  print(f"\n🏷️  Versão: {core.__version__}")
+              
+              print("\n✅ Validação bem-sucedida!")
+              
           except ImportError as e:
-              print(f"❌ ERRO: Falha ao importar vdsc-core: {e}")
-              exit(1)
+              print(f"❌ ERRO ao importar core: {e}")
+              print(f"\n📋 PYTHONPATH: {sys.path}")
+              
+              # Tentar diagnóstico adicional
+              import site
+              print(f"\n📋 site-packages paths:")
+              for sp in site.getsitepackages():
+                  print(f"   {sp}")
+                  if os.path.exists(sp):
+                      items = os.listdir(sp)
+                      core_items = [i for i in items if 'core' in i.lower() or 'vdsc' in i.lower()]
+                      if core_items:
+                          print(f"      Itens relacionados a core/vdsc: {core_items}")
+              
+              sys.exit(1)
           EOF
           
           if [ $? -ne 0 ]; then
+            echo ""
             echo "❌ Validação do vdsc-core falhou"
+            echo "📋 Tentando listar todos os pacotes instalados:"
+            pip list | grep -i core || echo "Nenhum pacote 'core' encontrado"
+            pip list | grep -i vdsc || echo "Nenhum pacote 'vdsc' encontrado"
             exit 1
           fi
-          echo "✅ vdsc-core validado com sucesso"
+          echo ""
+          echo "✅ vdsc-core validado com sucesso!"
 
       - name: Executar testes com cobertura
         run: |
