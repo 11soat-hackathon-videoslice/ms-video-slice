@@ -13,21 +13,21 @@ from .aws.datasources.storage.s3_repository import S3StorageRepository
 from .aws.datasources.producer.event_producer import EventProducer
 
 # Core - Adapters e Use Cases
-from .core.adapters import VdscController
-from .core.applications import VdscProcessUseCase
+from core.adapters import VdscController
+from core.applications import VdscProcessUseCase
 
 # Core - Domain e DTOs
-from .core.domain import LogEntry, VdscMetadata
-from .core.dtos import EventDTO, LogEntryDTO, VdscMetadataDTO
+from core.domain import LogEntry, VdscMetadata
+from core.dtos import EventDTO, LogEntryDTO, VdscMetadataDTO
 
 # Core - Enums
-from .core.enums import VdscStatusEnum, VideoQuality
+from core.enums import VdscStatusEnum, VideoQuality
 
 # Core - Exceptions
-from .core.exceptions import VdscException
+from core.exceptions import VdscException
 
 # Core - Interfaces
-from .core.interfaces import VdscControllerInterface, VdscDataProxyInterface, VdscGatewayInferface
+from core.interfaces import VdscControllerInterface, VdscDataProxyInterface, VdscGatewayInferface
 
 __all__ = [
     # Handler Lambda

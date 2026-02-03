@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from src.aws.datasources.database.dynamodb_repository import DynamoDBRepository
-from src.core.dtos.vdsc_metadata_dto import VdscMetadataDTO
+from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 
 
 @pytest.mark.unit
@@ -181,7 +181,7 @@ class TestDynamoDBRepository:
 
     def test_update_metadata_by_video_id_complete_flow(self, repository, mock_dynamodb_client):
         """Testa fluxo completo de atualização de metadados"""
-        from src.core.dtos.vdsc_metadata_dto import LogEntryDTO
+        from core.dtos.vdsc_metadata_dto import LogEntryDTO
 
         dto = VdscMetadataDTO(
             video_id='video789',

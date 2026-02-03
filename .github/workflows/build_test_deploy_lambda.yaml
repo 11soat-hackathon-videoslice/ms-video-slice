@@ -55,6 +55,53 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configurar SSH para autenticação com repositórios privados
+        run: |
+          echo "🔐 Configurando SSH para repositórios privados..."
+          
+          # Criar diretório .ssh se não existir
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Adicionar GitHub ao known_hosts para evitar prompts interativos
+          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # Configurar git para usar SSH
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          
+          echo "✅ Configuração SSH concluída"
+
+      - name: Determinar branch do video-slice-core
+        id: determine-branch
+        run: |
+          # Determinar a branch atual
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.head_ref }}"
+            echo "📌 Branch detectada (pull_request): ${BRANCH}"
+          else
+            BRANCH="${{ github.ref_name }}"
+            echo "📌 Branch detectada (push/workflow_dispatch): ${BRANCH}"
+          fi
+          
+          # Mapear branch para video-slice-core
+          # Se for develop, usar develop; se for master, usar main; caso contrário, usar a mesma branch
+          case "${BRANCH}" in
+            develop)
+              CORE_BRANCH="develop"
+              echo "✅ Usando video-slice-core@develop"
+              ;;
+            master)
+              CORE_BRANCH="main"
+              echo "✅ Usando video-slice-core@main"
+              ;;
+            *)
+              CORE_BRANCH="${BRANCH}"
+              echo "✅ Usando video-slice-core@${BRANCH}"
+              ;;
+          esac
+          
+          echo "CORE_BRANCH=${CORE_BRANCH}" >> $GITHUB_OUTPUT
+
       - name: Configurar Python ${{ vars.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -69,11 +116,93 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Atualizar requirements.txt com branch correto
+        run: |
+          CORE_BRANCH="${{ steps.determine-branch.outputs.CORE_BRANCH }}"
+          echo "🔄 Atualizando requirements.txt para usar video-slice-core@${CORE_BRANCH}"
+          
+          # Criar backup do arquivo original
+          cp src/requirements.txt src/requirements.txt.backup
+          
+          # Substituir a linha de vdsc-core no requirements.txt
+          sed -i "s|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@.*|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}|g" src/requirements.txt
+          
+          echo "📋 Conteúdo atualizado de requirements.txt:"
+          cat src/requirements.txt
+          
+          # Validar que o arquivo foi atualizado corretamente
+          echo ""
+          echo "🔍 Validando requirements.txt..."
+          if grep -q "vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}" src/requirements.txt; then
+            echo "✅ Branch correta detectada no requirements.txt"
+          else
+            echo "❌ ERRO: Branch não foi atualizada corretamente em requirements.txt"
+            echo "📋 Comparando original com atualizado:"
+            echo "--- Original:"
+            cat src/requirements.txt.backup
+            echo "--- Atualizado:"
+            cat src/requirements.txt
+            exit 1
+          fi
+          
+          # Validar linhas vazias e sintaxe
+          if grep -q "^[[:space:]]*$" src/requirements.txt; then
+            echo "⚠️ Aviso: Removendo linhas em branco extras..."
+            sed -i '/^[[:space:]]*$/d' src/requirements.txt
+          fi
+
       - name: Instalar dependências
         run: |
+          echo "📦 Iniciando instalação de dependências..."
           python -m pip install --upgrade pip
+          echo "✅ pip atualizado com sucesso"
+          
+          echo ""
+          echo "📦 Instalando dependências de teste..."
           pip install pytest pytest-cov pytest-mock boto3 moto requests opencv-python-headless
-          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+          echo "✅ Dependências de teste instaladas"
+          
+          if [ -f src/requirements.txt ]; then
+            echo ""
+            echo "📦 Instalando dependências da aplicação (incluindo vdsc-core)..."
+            pip install -r src/requirements.txt
+            
+            if [ $? -ne 0 ]; then
+              echo "❌ ERRO: Falha ao instalar dependências de src/requirements.txt"
+              echo "🔍 Tentando diagnóstico..."
+              echo "Conteúdo de src/requirements.txt:"
+              cat src/requirements.txt
+              exit 1
+            fi
+            echo "✅ Dependências da aplicação instaladas com sucesso"
+          else
+            echo "❌ ERRO: Arquivo src/requirements.txt não encontrado"
+            exit 1
+          fi
+
+      - name: Validar instalação do vdsc-core
+        run: |
+          echo "🔍 Validando instalação do vdsc-core..."
+          python << 'EOF'
+          try:
+              import core
+              import vdsc_core
+              print("✅ vdsc-core importado com sucesso")
+              print(f"   Localização: {core.__file__}")
+              
+              # Tentar obter versão se disponível
+              if hasattr(core, '__version__'):
+                  print(f"   Versão: {core.__version__}")
+          except ImportError as e:
+              print(f"❌ ERRO: Falha ao importar vdsc-core: {e}")
+              exit(1)
+          EOF
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Validação do vdsc-core falhou"
+            exit 1
+          fi
+          echo "✅ vdsc-core validado com sucesso"
 
       - name: Executar testes com cobertura
         run: |
@@ -156,11 +285,93 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
+      - name: Configurar SSH para autenticação com repositórios privados
+        run: |
+          echo "🔐 Configurando SSH para repositórios privados..."
+          
+          # Criar diretório .ssh se não existir
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Adicionar GitHub ao known_hosts para evitar prompts interativos
+          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # Configurar git para usar SSH
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          
+          echo "✅ Configuração SSH concluída"
+
+      - name: Determinar branch do video-slice-core
+        id: determine-branch
+        run: |
+          # Determinar a branch atual
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.head_ref }}"
+            echo "📌 Branch detectada (pull_request): ${BRANCH}"
+          else
+            BRANCH="${{ github.ref_name }}"
+            echo "📌 Branch detectada (push/workflow_dispatch): ${BRANCH}"
+          fi
+          
+          # Mapear branch para video-slice-core
+          # Se for develop, usar develop; se for master, usar main; caso contrário, usar a mesma branch
+          case "${BRANCH}" in
+            develop)
+              CORE_BRANCH="develop"
+              echo "✅ Usando video-slice-core@develop"
+              ;;
+            master)
+              CORE_BRANCH="main"
+              echo "✅ Usando video-slice-core@master"
+              ;;
+            *)
+              CORE_BRANCH="${BRANCH}"
+              echo "✅ Usando video-slice-core@${BRANCH}"
+              ;;
+          esac
+          
+          echo "CORE_BRANCH=${CORE_BRANCH}" >> $GITHUB_OUTPUT
+
       - name: Configurar Python ${{ vars.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
+
+      - name: Atualizar requirements.txt com branch correto
+        run: |
+          CORE_BRANCH="${{ steps.determine-branch.outputs.CORE_BRANCH }}"
+          echo "🔄 Atualizando requirements.txt para usar video-slice-core@${CORE_BRANCH}"
+          
+          # Criar backup do arquivo original
+          cp src/requirements.txt src/requirements.txt.backup
+          
+          # Substituir a linha de vdsc-core no requirements.txt
+          sed -i "s|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@.*|vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}|g" src/requirements.txt
+          
+          echo "📋 Conteúdo atualizado de requirements.txt:"
+          cat src/requirements.txt
+          
+          # Validar que o arquivo foi atualizado corretamente
+          echo ""
+          echo "🔍 Validando requirements.txt..."
+          if grep -q "vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@${CORE_BRANCH}" src/requirements.txt; then
+            echo "✅ Branch correta detectada no requirements.txt"
+          else
+            echo "❌ ERRO: Branch não foi atualizada corretamente em requirements.txt"
+            echo "📋 Comparando original com atualizado:"
+            echo "--- Original:"
+            cat src/requirements.txt.backup
+            echo "--- Atualizado:"
+            cat src/requirements.txt
+            exit 1
+          fi
+          
+          # Validar linhas vazias e sintaxe
+          if grep -q "^[[:space:]]*$" src/requirements.txt; then
+            echo "⚠️ Aviso: Removendo linhas em branco extras..."
+            sed -i '/^[[:space:]]*$/d' src/requirements.txt
+          fi
 
       - name: Configurar AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -180,16 +391,38 @@ jobs:
           mkdir -p lambda-package
           
           if [ -f src/requirements.txt ]; then
-            echo "⚠️ Usando requirements.txt"
+            echo "📋 Instalando dependências de src/requirements.txt..."
+            echo "🔍 Conteúdo do requirements.txt:"
+            cat src/requirements.txt
+            echo ""
+            
             pip install -r src/requirements.txt -t lambda-package/ --quiet --no-cache-dir
+            
+            if [ $? -ne 0 ]; then
+              echo "❌ ERRO: Falha ao instalar dependências para o pacote Lambda"
+              exit 1
+            fi
+            
+            echo "✅ Dependências instaladas no lambda-package"
+            
+            # Validar que vdsc-core foi instalado
+            if [ -d "lambda-package/core" ]; then
+              echo "✅ vdsc-core detectado no pacote Lambda"
+              ls -la lambda-package/core/
+            else
+              echo "⚠️ Aviso: Diretório 'core' não encontrado no lambda-package (pode estar instalado de outra forma)"
+            fi
           else
-            echo "⚠️ Arquivo requirements.txt não encontrado, pulando instalação de dependências."
+            echo "❌ ERRO: Arquivo requirements.txt não encontrado"
             exit 1
           fi
           
+          echo ""
           echo "📋 Copiando código fonte..."
           cp -r src/* lambda-package/
+          echo "✅ Código fonte copiado"
           
+          echo ""
           echo "🧹 Removendo arquivos desnecessários para reduzir tamanho..."
           # Remover arquivos de cache e temporários
           find lambda-package -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
@@ -211,6 +444,8 @@ jobs:
           rm -rf lambda-package/_pytest* 2>/dev/null || true
           rm -rf lambda-package/coverage* 2>/dev/null || true
           
+          echo "✅ Arquivos desnecessários removidos"
+          echo ""
           echo "🗜️ Criando arquivo ZIP..."
           cd lambda-package
           zip -r ../lambda-build-and-deployment-package.zip . -q -9

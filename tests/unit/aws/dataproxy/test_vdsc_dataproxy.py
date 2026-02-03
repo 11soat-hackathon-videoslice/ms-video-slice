@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import Mock
 from src.aws.dataproxy.vdsc_dataproxy import VdscDataProxy, dict_to_dynamodb_format
-from src.core.dtos.vdsc_metadata_dto import VdscMetadataDTO
+from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 
 
 @pytest.mark.unit
@@ -73,10 +73,62 @@ class TestVdscDataProxy:
         mock_s3.save_file.assert_called_once_with("test/file.txt", b"content")
 
     def test_send_event(self, dataproxy, mock_event_producer):
-        """Testa envio de evento"""
-        event_data = {"event": "test"}
-        dataproxy.send_event(event_data)
-        mock_event_producer.send_event.assert_called_once_with(event_data)
+        """Testa envio de evento de retry agendado"""
+        from datetime import datetime
+        mock_metadata = Mock()
+        mock_metadata.to_dynamodb_item.return_value = {"videoId": "test"}
+        schedule_time = datetime(2026, 1, 13, 0, 0, 0)
+        schedule_config = {"retry_arn": "arn:test"}
+        dataproxy.send_schedule_retry_event(mock_metadata, schedule_time, schedule_config)
+        mock_event_producer.send_schedule_retry_event.assert_called_once_with(
+            {"videoId": "test"}, schedule_time, schedule_config
+        )
+
+    def test_send_schedule_retry_event_with_metadata_conversion(self, dataproxy, mock_event_producer):
+        """Testa envio de evento de retry com conversão de metadados para formato DynamoDB"""
+        from datetime import datetime
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        mock_metadata.to_dynamodb_item.return_value = {
+            "videoId": {"S": "video123"},
+            "status": {"S": "retrying"},
+            "retries": {"N": "1"}
+        }
+        schedule_time = datetime(2026, 1, 13, 10, 30, 0)
+        schedule_config = {
+            "retry_arn": "arn:aws:sqs:us-east-1:123456789012:queue",
+            "retry_role_arn": "arn:aws:iam::123456789012:role/scheduler-role",
+            "retry_dlq": "arn:aws:sqs:us-east-1:123456789012:dlq",
+            "retry_backoff_factor": 10
+        }
+
+        dataproxy.send_schedule_retry_event(mock_metadata, schedule_time, schedule_config)
+
+        mock_event_producer.send_schedule_retry_event.assert_called_once_with(
+            mock_metadata.to_dynamodb_item.return_value,
+            schedule_time,
+            schedule_config
+        )
+        mock_metadata.to_dynamodb_item.assert_called_once()
+
+    def test_send_schedule_retry_event_preserves_schedule_config(self, dataproxy, mock_event_producer):
+        """Testa se send_schedule_retry_event preserva as configurações de agendamento"""
+        from datetime import datetime
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        mock_metadata.to_dynamodb_item.return_value = {"videoId": {"S": "vid456"}}
+        schedule_time = datetime(2026, 1, 15, 14, 45, 30)
+        schedule_config = {
+            "retry_arn": "arn:aws:sqs:us-east-1:123456789012:retry-queue",
+            "retry_role_arn": "arn:aws:iam::123456789012:role/scheduler",
+            "retry_dlq": "arn:aws:sqs:us-east-1:123456789012:retry-dlq",
+            "retry_backoff_factor": 5
+        }
+
+        dataproxy.send_schedule_retry_event(mock_metadata, schedule_time, schedule_config)
+
+        call_args = mock_event_producer.send_schedule_retry_event.call_args
+        assert call_args[0][1] == schedule_time
+        assert call_args[0][2] == schedule_config
+        assert call_args[0][2]["retry_backoff_factor"] == 5
 
     def test_update_metadata_by_video_id(self, dataproxy, mock_dynamodb):
         """Testa atualização de metadados"""
@@ -87,6 +139,78 @@ class TestVdscDataProxy:
 
         assert result == mock_dto
         mock_dynamodb.update_metadata_by_video_id.assert_called_once_with(mock_dto)
+
+    def test_send_notification(self, dataproxy):
+        """Testa envio de notificação (implementação vazia)"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email", "sms"]
+        message = "Vídeo processado com sucesso"
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_single_channel(self, dataproxy):
+        """Testa envio de notificação com um único canal"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email"]
+        message = "Notificação importante"
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_multiple_channels(self, dataproxy):
+        """Testa envio de notificação com múltiplos canais"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email", "sms", "push", "webhook"]
+        message = "Atualização de status"
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_empty_channels(self, dataproxy):
+        """Testa envio de notificação com lista de canais vazia"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = []
+        message = "Mensagem sem canais"
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_empty_message(self, dataproxy):
+        """Testa envio de notificação com mensagem vazia"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email"]
+        message = ""
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_long_message(self, dataproxy):
+        """Testa envio de notificação com mensagem longa"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email", "sms"]
+        message = "A" * 1000  # Mensagem muito longa
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_special_characters(self, dataproxy):
+        """Testa envio de notificação com caracteres especiais"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email"]
+        message = "Notificação com caracteres especiais: @#$%&*()_+-=[]{}|;:',.<>?/~`"
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
+
+    def test_send_notification_with_unicode_characters(self, dataproxy):
+        """Testa envio de notificação com caracteres Unicode"""
+        mock_metadata = Mock(spec=VdscMetadataDTO)
+        channels = ["email"]
+        message = "Notificação com caracteres: áéíóú ñ ü 中文 日本語 한국어"
+
+        result = dataproxy.send_notification(mock_metadata, channels, message)
+        assert result is None
 
 
 @pytest.mark.unit
@@ -208,4 +332,3 @@ class TestDictToDynamoDBFormat:
         assert 'M' in result['level1']
         assert 'M' in result['level1']['M']['level2']
         assert 'M' in result['level1']['M']['level2']['M']['level3']
-

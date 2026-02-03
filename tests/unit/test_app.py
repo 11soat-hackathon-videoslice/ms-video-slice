@@ -101,10 +101,10 @@ class TestLambdaHandler:
 class TestAppInternals:
 
     def test__process_video_event_success(self):
-        record = MagicMock()
-        record.dynamodb.new_image = {'videoId': 'vid'}
-        with patch('src.app.VdscMetadataDTO.from_dynamodb_item') as mock_from, \
-             patch('src.app.controller') as mock_controller, \
+        """Testa processamento bem-sucedido de evento de vídeo"""
+        mock_metadata = MagicMock()
+        mock_metadata.video_id = 'vid'
+        with patch('src.app.controller') as mock_controller, \
              patch('src.app.config') as mock_config, \
              patch('src.app.logger') as mock_logger, \
              patch('os.listdir', return_value=[]), \
@@ -112,24 +112,24 @@ class TestAppInternals:
              patch('os.path.isdir', return_value=False), \
              patch('os.unlink'), \
              patch('shutil.rmtree'):
-            mock_metadata = MagicMock()
-            mock_metadata.video_id = 'vid'
-            mock_from.return_value = mock_metadata
-            _process_video_event(record)
-            mock_controller.video_slice_processing.assert_called()
+            _process_video_event(mock_metadata)
+            mock_controller.video_slice_processing.assert_called_with(mock_metadata, mock_config)
             mock_logger.info.assert_any_call('Processamento concluído para vídeo ID: vid')
 
     def test__process_video_event_exception(self):
-        record = MagicMock()
-        record.dynamodb.new_image = {'videoId': 'vid'}
-        with patch('src.app.VdscMetadataDTO.from_dynamodb_item', side_effect=Exception('fail')), \
-             patch('src.app.controller') as mock_controller, \
+        """Testa tratamento de exceção durante processamento de vídeo"""
+        mock_metadata = MagicMock()
+        mock_metadata.video_id = 'vid'
+        with patch('src.app.controller') as mock_controller, \
              patch('src.app.logger') as mock_logger, \
              patch('os.listdir', return_value=[]), \
              patch('os.path.isfile', return_value=False), \
              patch('os.path.isdir', return_value=False), \
              patch('os.unlink'), \
              patch('shutil.rmtree'):
-            _process_video_event(record)
+            mock_controller.video_slice_processing.side_effect = Exception('fail')
+            _process_video_event(mock_metadata)
             assert mock_logger.error.called
-            mock_controller.handler.handle_exception.assert_called()
+            mock_controller.handler.handle_exception.assert_called_once()
+
+

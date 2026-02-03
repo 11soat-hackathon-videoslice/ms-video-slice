@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import patch
 from src.aws.handler.vdsc_exception_handler import VdscExceptionHandler
-from src.core.exceptions.vdsc_exceptions import VdscException
+from core.exceptions.vdsc_exceptions import VdscException
 
 
 @pytest.mark.unit
@@ -53,7 +53,7 @@ class TestVdscExceptionHandler:
 
         mock_print.assert_called_once()
         args = mock_print.call_args[0][0]
-        assert "Erro inesperado" in args
+        assert "Erro capturado" in args
 
     @patch('builtins.print')
     def test_decorator_prints_generic_exception_message(self, mock_print, handler):
@@ -178,7 +178,7 @@ class TestVdscExceptionHandler:
             func()
 
         call_args = mock_print.call_args[0][0]
-        assert "Erro inesperado" in call_args
+        assert "Erro capturado" in call_args
         assert "Mensagem de erro específica" in call_args
 
     @patch('builtins.print')

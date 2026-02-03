@@ -10,4 +10,4 @@ Pillow==10.4.0
 numpy==1.26.4
 aws-lambda-powertools[tracer,validation]
 
-vdsc-core @ git+https://github.com@develop
+vdsc-core @ git+ssh://git@github.com/11soat-hackton-videoslice/video-slice-core.git@develop
