@@ -24,7 +24,7 @@ class TestVdscConfig:
     def test_default_s3_config(self):
         """Testa configurações padrão do S3"""
         config = VdscConfig()
-        assert config.s3_bucket['name'] == 'vdsc-prd-s3-videos'
+        assert config.s3_bucket['name'] == os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos')
         assert config.s3_bucket['dir_uploads'] == 'uploads/'
         assert config.s3_bucket['dir_finished'] == 'finished/'
         assert config.s3_bucket['dir_processing'] == 'processing/'
@@ -38,12 +38,12 @@ class TestVdscConfig:
     def test_default_eventbus_config(self):
         """Testa configurações padrão do EventBus"""
         config = VdscConfig()
-        assert config.eventbus['name'] == 'vdsc-prd-event-bus'
+        assert config.eventbus['name'] == os.getenv('EVENT_BUS_NAME', 'vdsc-prd-event-bus')
 
     def test_default_dynamodb_config(self):
         """Testa configurações padrão do DynamoDB"""
         config = VdscConfig()
-        assert config.dynamodb['table_name'] == 'VideoSlice'
+        assert config.dynamodb['table_name'] == os.getenv('DYNAMODB_TABLE_NAME', 'VideoSlice')
 
     def test_default_vdsc_config(self):
         """Testa configurações padrão de processamento de vídeo"""
