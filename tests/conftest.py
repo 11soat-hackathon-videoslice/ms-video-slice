@@ -1,8 +1,19 @@
 """Configurações e fixtures compartilhadas para os testes"""
 import pytest
 import sys
+import os
 from pathlib import Path
 from unittest.mock import MagicMock
+
+# Configure AWS environment variables before any imports
+os.environ.setdefault('AWS_REGION', 'us-east-1')
+os.environ.setdefault('AWS_ACCOUNT_ID', '123456789012')
+os.environ.setdefault('S3_BUCKET_NAME', 'test-bucket')
+os.environ.setdefault('DYNAMODB_TABLE_NAME', 'TestVideoSlice')
+os.environ.setdefault('SQS_URL', 'https://sqs.us-east-1.amazonaws.com/test')
+os.environ.setdefault('EVENT_BUS_NAME', 'test-event-bus')
+os.environ.setdefault('PNG_COMPRESSION_LEVEL', '9')
+os.environ.setdefault('ZIP_COMPRESSION_LEVEL', '5')
 
 # Mock do decorador idempotent antes de qualquer import do app
 def mock_idempotent_decorator(config=None, persistence_layer=None, **kwargs):
