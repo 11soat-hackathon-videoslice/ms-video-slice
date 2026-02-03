@@ -28,18 +28,14 @@ class VdscConfig:
 
     def _initialize(self, quality = quality, schedule_event_rules = schedule_event_rules):
         self.aws = {
-            'region': os.getenv('AWS_REGION', 'us-east-1'),
-            'account_id': os.getenv('AWS_ACCOUNT_ID')}
+            'aws_region': os.getenv('AWS_REGION', 'us-east-1')
+        }
         self.s3_bucket = {
-            'name': os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos'),
+            'bucket_name': os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos'),
             'dir_uploads': os.getenv('S3_BUCKET_DIR_UPLOADS', 'uploads/'),
             'dir_finished': os.getenv('S3_BUCKET_DIR_FINISHED', 'finished/'),
             'dir_processing': os.getenv('S3_BUCKET_DIR_PROCESSING', 'processing/')
-        }
-        self.sqs = {
-            'url': os.getenv('SQS_URL', 'https://sqs.us-east-1.amazonaws.com'),
-            'dlq_name': os.getenv('SQS_DLQ_NAME', 'vdsc-prd-dlq')
-        }
+        },
         self.eventbus = {
             'name': os.getenv('EVENT_BUS_NAME', 'vdsc-prd-event-bus')
         }
@@ -53,8 +49,30 @@ class VdscConfig:
             'schedule_event_rules': schedule_event_rules
         }
 
+    def to_dto(self) -> VdscConfigDTO:
+        quality_obj = QualityDTO(**self.vdsc['quality'])
+        schedule_obj = ScheduleRulesDTO(**self.vdsc['schedule_event_rules'])
+
+        return VdscConfigDTO(
+            aws_region=self.aws['aws_region'],
+            event_bus_name=self.eventbus['name'],
+            dynamodb_table_name=self.dynamodb['table_name'],
+            s3_bucket=S3ConfigDTO(
+                bucket_name=self.s3_bucket['bucket_name'],
+                dir_uploads=self.s3_bucket['dir_uploads'],
+                dir_finished=self.s3_bucket['dir_finished'],
+                dir_processing=self.s3_bucket['dir_processing']
+            ),
+            vdsc=VdscSettingsDTO(
+                png_compression_level=self.vdsc['png_compression_level'],
+                zip_compression_level=self.vdsc['zip_compression_level'],
+                quality=quality_obj,
+                schedule_event_rules=schedule_obj
+            )
+        )
+
 # Configurações e repositórios
-config = VdscConfig()
+config = VdscConfig().to_dto()
 
 dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
 s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
