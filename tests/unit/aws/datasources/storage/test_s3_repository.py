@@ -37,8 +37,15 @@ class TestS3StorageRepository:
              patch('boto3.resource') as mock_resource:
             repo = S3StorageRepository(bucket_name="test-bucket", region="us-west-2")
             assert repo.bucket_name == "test-bucket"
+            assert repo.region == "us-west-2"
+            # Os clientes não são criados durante init com lazy loading
+            mock_client.assert_not_called()
+            mock_resource.assert_not_called()
+            # Acessar as properties dispara a criação dos clientes
+            _ = repo.s3_client
+            _ = repo.s3_resource
             mock_client.assert_called_once_with('s3', region_name='us-west-2')
-            mock_resource.assert_called_once()
+            mock_resource.assert_called_once_with('s3', region_name='us-west-2')
 
     def test_create_directory_adds_trailing_slash(self, repository, mock_s3_client):
         """Testa criação de diretório adicionando barra final"""

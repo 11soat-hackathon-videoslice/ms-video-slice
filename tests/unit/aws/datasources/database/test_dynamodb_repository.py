@@ -27,6 +27,11 @@ class TestDynamoDBRepository:
         with patch('boto3.client') as mock_boto:
             repo = DynamoDBRepository(table_name="TestTable", region="us-west-2")
             assert repo.table_name == "TestTable"
+            assert repo.region == "us-west-2"
+            # O cliente não é criado durante init com lazy loading
+            mock_boto.assert_not_called()
+            # Acessar a property dispara a criação do cliente
+            _ = repo.dynamodb_client
             mock_boto.assert_called_once_with('dynamodb', region_name='us-west-2')
 
     def test_get_metadata_by_video_id_success(self, repository, mock_dynamodb_client):

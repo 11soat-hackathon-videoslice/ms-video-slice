@@ -9,7 +9,19 @@ logger = logging.getLogger(__name__)
 class EventProducer(EventProducerInterface):
 
     def __init__(self) -> None:
-        self.scheduler = boto3.client('scheduler')
+        self._scheduler = None
+
+    @property
+    def scheduler(self):
+        """Lazy loading do cliente boto3 scheduler"""
+        if self._scheduler is None:
+            self._scheduler = boto3.client('scheduler')
+        return self._scheduler
+
+    @scheduler.setter
+    def scheduler(self, value):
+        """Setter para permitir mock do cliente nos testes"""
+        self._scheduler = value
 
     def send_schedule_retry_event(self, event_data, schedule_time: datetime, schedule_config: dict):
         logger.info(f"Formatando EventBridge Scheduler com dados: {event_data} e horário agendado: {schedule_time}")

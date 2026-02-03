@@ -12,8 +12,33 @@ class S3StorageRepository(S3Interface):
     def __init__(self, bucket_name: str, region: str):
         """Inicializa o repositório S3 com bucket e região específicos"""
         self.bucket_name = bucket_name
-        self.s3_client = boto3.client('s3', region_name=region)
-        self.s3_resource = boto3.resource('s3', region_name=region).Bucket(bucket_name)
+        self.region = region
+        self._s3_client = None
+        self._s3_resource = None
+
+    @property
+    def s3_client(self):
+        """Lazy loading do cliente boto3 S3"""
+        if self._s3_client is None:
+            self._s3_client = boto3.client('s3', region_name=self.region)
+        return self._s3_client
+
+    @s3_client.setter
+    def s3_client(self, value):
+        """Setter para permitir mock do cliente nos testes"""
+        self._s3_client = value
+
+    @property
+    def s3_resource(self):
+        """Lazy loading do recurso boto3 S3"""
+        if self._s3_resource is None:
+            self._s3_resource = boto3.resource('s3', region_name=self.region).Bucket(self.bucket_name)
+        return self._s3_resource
+
+    @s3_resource.setter
+    def s3_resource(self, value):
+        """Setter para permitir mock do recurso nos testes"""
+        self._s3_resource = value
 
     def create_directory(self, directory_path: str) -> None:
         """Cria um diretório (prefixo) no S3"""

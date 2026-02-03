@@ -10,7 +10,20 @@ class DynamoDBRepository(DynamoDBInterface):
 
     def __init__(self, table_name: str, region: str):
         self.table_name = table_name
-        self.dynamodb_client = boto3.client('dynamodb', region_name=region)
+        self.region = region
+        self._dynamodb_client = None
+
+    @property
+    def dynamodb_client(self):
+        """Lazy loading do cliente boto3 DynamoDB"""
+        if self._dynamodb_client is None:
+            self._dynamodb_client = boto3.client('dynamodb', region_name=self.region)
+        return self._dynamodb_client
+
+    @dynamodb_client.setter
+    def dynamodb_client(self, value):
+        """Setter para permitir mock do cliente nos testes"""
+        self._dynamodb_client = value
 
 
     def get_metadata_by_video_id(self, video_id: str) -> VdscMetadataDTO:
