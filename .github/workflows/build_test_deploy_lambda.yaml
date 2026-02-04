@@ -1,4 +1,4 @@
-name: Build, Test and Deploy Lambda
+name: Build, Test and Deploy vdsc-prd-lmb-video-url-generator
 
 permissions:
   id-token: write
@@ -28,21 +28,17 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME }}
+  EVENT_BUS_NAME: ${{ vars.EVENT_BUS_NAME }}
+  FUNCTION_NAME: ${{ vars.FUNCTION_NAME }}
   PYTHON_VERSION: '3.12'
   S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}
   S3_BUCKET_DIR_UPLOADS: ${{ vars.S3_BUCKET_DIR_UPLOADS }}
   S3_BUCKET_DIR_FINISHED: ${{ vars.S3_BUCKET_DIR_FINISHED }}
   S3_BUCKET_DIR_PROCESSING: ${{ vars.S3_BUCKET_DIR_PROCESSING }}
-  EVENT_BUS_NAME: ${{ vars.EVENT_BUS_NAME }}
-  DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME }}
-  DYNAMODB_STREAM_ARN: ${{ vars.DYNAMODB_STREAM_ARN }}
   VDSC_PNG_COMPRESSION_LEVEL: ${{ vars.VDSC_PNG_COMPRESSION_LEVEL }}
-  VDSC_ZIP_COMPRESSION_LEVEL: ${{ vars.VDSC_ZIP_COMPRESSION_LEVEL }}
   VDSC_QUALITY: ${{ vars.VDSC_QUALITY }}
-  VDSC_MAX_WORKERS: ${{ vars.VDSC_MAX_WORKERS }}
-  VDSC_MAX_TIMEOUT: ${{ vars.VDSC_MAX_TIMEOUT }}
-  AWS_LAMBDA_LOG_LEVEL: ${{ vars.AWS_LAMBDA_LOG_LEVEL }}
+  VDSC_ZIP_COMPRESSION_LEVEL: ${{ vars.VDSC_ZIP_COMPRESSION_LEVEL }}
   VDSC_PAT: ${{ secrets.VDSC_PAT }}
 
 jobs:
@@ -327,14 +323,10 @@ jobs:
     needs: [tests-and-coverage, approval]
     if: |
       always() &&
-        (needs.tests-and-coverage.result == 'success' || 
-          (needs.tests-and-coverage.result == 'skipped' &&  github.event.inputs.deploy_only == 'true')
-        )&&
-      (
-        ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/develop') ||
-        (github.event_name == 'pull_request' && needs.approval.result == 'success')
-      ) &&
-      (needs.approval.result == 'success' || needs.approval.result == 'skipped')
+      (needs.tests-and-coverage.result == 'success' || 
+       (needs.tests-and-coverage.result == 'skipped' && github.event.inputs.deploy_only == 'true')) &&
+      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/develop' ||
+       github.event_name == 'pull_request' && needs.approval.result == 'success')
     # Se for push na develop: executa direto após tests-and-coverage (approval será skipped)
     # Se for pull_request para master: só executa após aprovação manual bem-sucedida
 
@@ -504,7 +496,7 @@ jobs:
           echo ""
           echo "🗜️ Criando arquivo ZIP..."
           cd lambda-package
-          zip -r ../lambda-build-and-deployment-package.zip . -q -9
+          zip -r ../$ZIP_NAME.zip . -q -9
           cd ..
           
           PACKAGE_SIZE=$(ls -lh lambda-build-and-deployment-package.zip | awk '{print $5}')
@@ -512,34 +504,19 @@ jobs:
           echo "✅ Pacote preparado com sucesso"
         env:
           PYTHON_REQUIRIMENTS: ${{ github.workspace }}/src/requirements.txt || {{vars.PYTHON_REQUIRIMENTS}}
+          ZIP_NAME: ${{ env.FUNCTION_NAME }}
 
       - name: Deploy via AWS CLI
+        env:
+            FUNCTION_NAME: ${{ env.FUNCTION_NAME }}
         run: |
           echo "🚀 Iniciando build-and-deploy da Lambda via AWS CLI..."
           TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
-          FUNCTION_NAME="vdsc-prd-lmb-video-slice"
-          
-          # Verificar tamanho do pacote
-          PACKAGE_SIZE_BYTES=$(stat -c%s lambda-build-and-deployment-package.zip)
-          PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024)) 
-          echo "📊 Tamanho do pacote: ${PACKAGE_SIZE_MB}MB (${PACKAGE_SIZE_BYTES} bytes)"
-          
-          echo "⬆️ Fazendo upload do pacote para S3..."
-          S3_KEY="deploy/lambda/vdsc-prd-lmb-video-slice-${TIMESTAMP}.zip"
-            
-          aws s3 cp lambda-build-and-deployment-package.zip \
-            s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY} \
-            --region ${{ env.AWS_REGION }} \
-            --no-progress
-            
-          echo "✅ Upload para S3 concluído: s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY}"
-          echo ""
-          echo "📤 Atualizando código da função Lambda via S3..."
-            
-          aws lambda update-function-code \
+                    
+         aws lambda update-function-code \
             --function-name ${FUNCTION_NAME} \
             --s3-bucket ${{ env.S3_BUCKET_NAME }} \
-            --s3-key ${S3_KEY} \
+            --file fileb://./${FUNCTION_NAME}.zip \
             --region ${{ env.AWS_REGION }} \
             --no-cli-pager
           
@@ -553,179 +530,3 @@ jobs:
           echo ""
           echo "⚙️ Atualizando configurações da Lambda..."
           
-         #    # Criar arquivo JSON com as variáveis de ambiente usando jq
-         #    jq -n \
-         #      --arg s3_bucket "${{ env.S3_BUCKET_NAME }}" \
-         #      --arg s3_uploads "${{ env.S3_BUCKET_DIR_UPLOADS }}" \
-         #      --arg s3_finished "${{ env.S3_BUCKET_DIR_FINISHED }}" \
-         #      --arg s3_processing "${{ env.S3_BUCKET_DIR_PROCESSING }}" \
-         #      --arg event_bus "${{ env.EVENT_BUS_NAME }}" \
-         #      --arg dynamodb_table "${{ env.DYNAMODB_TABLE_NAME }}" \
-         #      --arg png_compression "${{ env.VDSC_PNG_COMPRESSION_LEVEL }}" \
-         #      --arg zip_compression "${{ env.VDSC_ZIP_COMPRESSION_LEVEL }}" \
-         #      --arg quality "${{ env.VDSC_QUALITY }}" \
-         #      --arg mpl_config "/tmp/matplotlib" \
-         #      --arg max_workers "${{ env.VDSC_MAX_WORKERS }}" \
-         #      --arg max_timeout "${{ env.VDSC_MAX_TIMEOUT }}" \
-         #      --arg log_level "${{ env.AWS_LAMBDA_LOG_LEVEL }}" \
-         #      '{Variables: {S3_BUCKET_NAME: $s3_bucket, S3_BUCKET_DIR_UPLOADS: $s3_uploads, S3_BUCKET_DIR_FINISHED: $s3_finished, S3_BUCKET_DIR_PROCESSING: $s3_processing, EVENT_BUS_NAME: $event_bus, DYNAMODB_TABLE_NAME: $dynamodb_table, VDSC_PNG_COMPRESSION_LEVEL: $png_compression, VDSC_ZIP_COMPRESSION_LEVEL: $zip_compression, VDSC_QUALITY: $quality, MPLCONFIGDIR: $mpl_config, VDSC_MAX_WORKERS: $max_workers, VDSC_MAX_TIMEOUT: $max_timeout, AWS_LAMBDA_LOG_LEVEL: $log_level}}' \
-         #      > env-vars.json
-         #    
-         #    echo "📋 Variáveis de ambiente a serem configuradas:"
-         #    cat env-vars.json
-         #    
-         #    aws lambda update-function-configuration \
-         #      --function-name ${FUNCTION_NAME} \
-         #      --region ${{ env.AWS_REGION }} \
-         #      --environment file://env-vars.json \
-         #      --handler app.lambda_handler \
-         #      --timeout 30 \
-         #      --memory-size 1769 \
-         #      --ephemeral-storage Size=512 \
-         #      --no-cli-pager
-         #    
-         #    # Limpar arquivo temporário
-         #    rm -f env-vars.json
-         #    
-         #    echo "⏳ Aguardando conclusão da atualização de configuração..."
-         #    aws lambda wait function-updated \
-         #      --function-name ${FUNCTION_NAME} \
-         #      --region ${{ env.AWS_REGION }}
-         #    
-         #    echo "✅ Configurações atualizadas com sucesso"
-         #    echo ""
-         #    echo "🎉 Deploy concluído com sucesso às ${TIMESTAMP}"
-         #
-         #- name: Configurar Event Source Mapping do DynamoDB
-         #  run: |
-         #    echo "🔗 Configurando Event Source Mapping do DynamoDB..."
-         #    FUNCTION_NAME="vdsc-prd-lmb-video-slice"
-         #    
-         #    if [ -z "${{ env.DYNAMODB_STREAM_ARN }}" ]; then
-         #      echo "⚠️ DYNAMODB_STREAM_ARN não configurado. Pulando configuração."
-         #      exit 0
-         #    fi
-         #    
-         #    echo "🔍 Verificando Event Source Mapping existente..."
-         #    MAPPING_UUID=$(aws lambda list-event-source-mappings \
-         #      --function-name ${FUNCTION_NAME} \
-         #      --region ${{ env.AWS_REGION }} \
-         #      --query "EventSourceMappings[?EventSourceArn=='${{ env.DYNAMODB_STREAM_ARN }}'].UUID" \
-         #      --output text \
-         #      --no-cli-pager)
-         #    
-         #    if [ -n "$MAPPING_UUID" ] && [ "$MAPPING_UUID" != "None" ]; then
-         #      echo "✅ Event Source Mapping encontrado: ${MAPPING_UUID}"
-         #      echo "🔄 Atualizando configuração..."
-         #      
-         #      aws lambda update-event-source-mapping \
-         #        --uuid ${MAPPING_UUID} \
-         #        --region ${{ env.AWS_REGION }} \
-         #        --batch-size 1 \
-         #        --maximum-batching-window-in-seconds 0 \
-         #        --enabled \
-         #        --no-cli-pager
-         #      
-         #      echo "✅ Event Source Mapping atualizado"
-         #    else
-         #      echo "➕ Criando novo Event Source Mapping..."
-         #      
-         #      # Criar arquivo JSON com os filtros usando jq
-         #      jq -n '{
-         #        Filters: [
-         #          {
-         #            Pattern: "{\"eventName\":[\"INSERT\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"UPLOADED\"]}}}}"
-         #          },
-         #          {
-         #            Pattern: "{\"eventName\":[\"MODIFY\"],\"dynamodb\":{\"NewImage\":{\"status\":{\"S\":[\"RETRYING\"]}}}}"
-         #          }
-         #        ]
-         #      }' > filter_criteria.json
-         #      
-         #      echo "📋 Filtros a serem aplicados:"
-         #      cat filter_criteria.json
-         #      
-         #      # Usar $LATEST para manter a Lambda sempre na última versão
-         #      aws lambda create-event-source-mapping \
-         #        --function-name ${FUNCTION_NAME} \
-         #        --event-source-arn ${{ env.DYNAMODB_STREAM_ARN }} \
-         #        --starting-position LATEST \
-         #        --batch-size 1 \
-         #        --maximum-batching-window-in-seconds 0 \
-         #        --parallelization-factor 1 \
-         #        --enabled \
-         #        --filter-criteria file://filter_criteria.json \
-         #        --region ${{ env.AWS_REGION }} \
-         #        --no-cli-pager
-         #      
-         #      # Limpar arquivo temporário
-         #      rm -f filter_criteria.json
-         #      
-         #      echo "✅ Event Source Mapping criado com sucesso"
-         #    fi
-         #
-         #- name: Configurar Alias PRD apontando para $LATEST
-         #  run: |
-         #    echo "🏷️ Configurando alias PRD para apontar para \$LATEST..."
-         #    FUNCTION_NAME="vdsc-prd-lmb-video-slice"
-         #    
-         #    # Verificar se o alias PRD já existe
-         #    echo "🔍 Verificando se alias PRD existe..."
-         #    ALIAS_EXISTS=$(aws lambda get-alias \
-         #      --function-name ${FUNCTION_NAME} \
-         #      --name PRD \
-         #      --region ${{ env.AWS_REGION }} \
-         #      --query 'Name' \
-         #      --output text 2>/dev/null || echo "NOT_FOUND")
-         #    
-         #    if [ "$ALIAS_EXISTS" = "PRD" ]; then
-         #      echo "✅ Alias PRD encontrado, atualizando para apontar para \$LATEST..."
-         #      
-         #      aws lambda update-alias \
-         #        --function-name ${FUNCTION_NAME} \
-         #        --name PRD \
-         #        --function-version \$LATEST \
-         #        --region ${{ env.AWS_REGION }} \
-         #        --no-cli-pager
-         #      
-         #      echo "✅ Alias PRD atualizado para \$LATEST"
-         #    else
-         #      echo "➕ Alias PRD não encontrado, criando novo alias apontando para \$LATEST..."
-         #      
-         #      aws lambda create-alias \
-         #        --function-name ${FUNCTION_NAME} \
-         #        --name PRD \
-         #        --function-version \$LATEST \
-         #        --description "Alias de produção apontando para a versão \$LATEST" \
-         #        --region ${{ env.AWS_REGION }} \
-         #        --no-cli-pager
-         #      
-         #      echo "✅ Alias PRD criado e apontando para \$LATEST"
-         #    fi
-         #    
-         #    # Verificar configuração final do alias
-         #    echo ""
-         #    echo "📋 Configuração final do alias PRD:"
-         #    aws lambda get-alias \
-         #      --function-name ${FUNCTION_NAME} \
-         #      --name PRD \
-         #      --region ${{ env.AWS_REGION }} \
-         #      --query '{Name:Name, FunctionVersion:FunctionVersion, Description:Description}' \
-         #      --output table \
-         #      --no-cli-pager
-         #
-         #- name: Verificar status da função Lambda
-         #  run: |
-         #    echo "📋 Informações da função Lambda após build-and-deploy:"
-         #    FUNCTION_NAME="vdsc-prd-lmb-video-slice"
-         #    
-         #    aws lambda get-function \
-         #      --function-name ${FUNCTION_NAME} \
-         #      --region ${{ env.AWS_REGION }} \
-         #      --query 'Configuration.[FunctionName,Runtime,LastModified,State,Version,CodeSize,MemorySize,Timeout]' \
-         #      --output table \
-         #      --no-cli-pager
-         #    
-         #    echo ""
-         #    echo "🏷️ Alias PRD configurado e apontando para \$LATEST"
-         #    echo "✅ Deploy finalizado com sucesso"
