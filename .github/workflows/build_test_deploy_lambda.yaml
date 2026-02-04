@@ -499,7 +499,7 @@ jobs:
           zip -r ../$ZIP_NAME.zip . -q -9
           cd ..
           
-          PACKAGE_SIZE=$(ls -lh lambda-build-and-deployment-package.zip | awk '{print $5}')
+          PACKAGE_SIZE=$(ls -lh $ZIP_NAME.zip | awk '{print $5}')
           echo "📊 Tamanho do pacote final: ${PACKAGE_SIZE}"
           echo "✅ Pacote preparado com sucesso"
 
@@ -515,7 +515,7 @@ jobs:
           TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
           
           # Verificar tamanho do pacote
-          PACKAGE_SIZE_BYTES=$(stat -c%s lambda-build-and-deployment-package.zip)
+          PACKAGE_SIZE_BYTES=$(stat -c%s $FUNCTION_NAME.zip)
           PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024)) 
           echo "📊 Tamanho do pacote: ${PACKAGE_SIZE_MB}MB (${PACKAGE_SIZE_BYTES} bytes)"
           
