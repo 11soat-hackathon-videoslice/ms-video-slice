@@ -166,7 +166,7 @@ jobs:
             echo ""
             echo "📦 Instalando dependências da aplicação (incluindo vdsc-core)..."
             pip install -r src/requirements.txt
-            
+          
             if [ $? -ne 0 ]; then
               echo "❌ ERRO: Falha ao instalar dependências de src/requirements.txt"
               echo "🔍 Tentando diagnóstico..."
@@ -205,12 +205,12 @@ jobs:
                   if os.path.exists(core_path):
                       print(f"✅ Diretório 'core' encontrado em: {core_path}")
                       print(f"   Conteúdo: {os.listdir(core_path)}")
-              
+          
               # Tentar importar
               import core
               print("✅ vdsc-core importado com sucesso!")
               print(f"   Localização: {core.__file__}")
-              
+          
               # Listar submódulos
               import pkgutil
               print("\n📦 Módulos disponíveis em core:")
@@ -218,20 +218,20 @@ jobs:
               for importer, modname, ispkg in pkgutil.iter_modules(core.__path__):
                   modules.append(modname)
                   print(f"   - {modname}")
-              
+          
               if not modules:
                   print("   (nenhum submódulo encontrado)")
-              
+          
               # Versão
               if hasattr(core, '__version__'):
                   print(f"\n🏷️  Versão: {core.__version__}")
-              
+          
               print("\n✅ Validação bem-sucedida!")
-              
+          
           except ImportError as e:
               print(f"❌ ERRO ao importar core: {e}")
               print(f"\n📋 PYTHONPATH: {sys.path}")
-              
+          
               # Tentar diagnóstico adicional
               import site
               print(f"\n📋 site-packages paths:")
@@ -242,7 +242,7 @@ jobs:
                       core_items = [i for i in items if 'core' in i.lower() or 'vdsc' in i.lower()]
                       if core_items:
                           print(f"      Itens relacionados a core/vdsc: {core_items}")
-              
+          
               sys.exit(1)
           EOF
           
@@ -269,7 +269,7 @@ jobs:
             echo "✅ coverage.xml encontrado"
             echo "📋 Conteúdo antes da correção:"
             head -30 coverage.xml
-            
+          
             echo ""
             echo "🔧 Corrigindo caminhos absolutos no coverage.xml..."
             # Remover completamente a seção <sources>...</sources>
@@ -278,7 +278,7 @@ jobs:
             sed -i 's|filename="|filename="src/|g' coverage.xml
             # Corrigir casos onde src/ foi duplicado
             sed -i 's|filename="src/src/|filename="src/|g' coverage.xml
-            
+          
             echo ""
             echo "📋 Conteúdo após a correção:"
             head -30 coverage.xml
@@ -320,7 +320,7 @@ jobs:
   build-and-deploy:
     name: Build e Deploy na AWS
     runs-on: ubuntu-latest
-    needs: [tests-and-coverage, approval]
+    needs: [ tests-and-coverage, approval ]
     if: |
       always() &&
       (needs.tests-and-coverage.result == 'success' || 
@@ -443,16 +443,16 @@ jobs:
             echo "🔍 Conteúdo do requirements.txt:"
             cat src/requirements.txt
             echo ""
-            
+          
             pip install -r src/requirements.txt -t lambda-package/ --quiet --no-cache-dir
-            
+          
             if [ $? -ne 0 ]; then
               echo "❌ ERRO: Falha ao instalar dependências para o pacote Lambda"
               exit 1
             fi
-            
+          
             echo "✅ Dependências instaladas no lambda-package"
-            
+          
             # Validar que vdsc-core foi instalado
             if [ -d "lambda-package/core" ]; then
               echo "✅ vdsc-core detectado no pacote Lambda"
@@ -502,18 +502,19 @@ jobs:
           PACKAGE_SIZE=$(ls -lh lambda-build-and-deployment-package.zip | awk '{print $5}')
           echo "📊 Tamanho do pacote final: ${PACKAGE_SIZE}"
           echo "✅ Pacote preparado com sucesso"
+
         env:
           PYTHON_REQUIRIMENTS: ${{ github.workspace }}/src/requirements.txt || {{vars.PYTHON_REQUIRIMENTS}}
-          ZIP_NAME: ${{ env.FUNCTION_NAME }}
+          ZIP_NAME: ${{env.FUNCTION_NAME}}
 
       - name: Deploy via AWS CLI
         env:
-            FUNCTION_NAME: ${{ env.FUNCTION_NAME }}
+          FUNCTION_NAME: ${{ env.FUNCTION_NAME }}
         run: |
           echo "🚀 Iniciando build-and-deploy da Lambda via AWS CLI..."
           TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
-                    
-         aws lambda update-function-code \
+          
+          aws lambda update-function-code \
             --function-name ${FUNCTION_NAME} \
             --s3-bucket ${{ env.S3_BUCKET_NAME }} \
             --file fileb://./${FUNCTION_NAME}.zip \
