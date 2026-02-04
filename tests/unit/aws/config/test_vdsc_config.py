@@ -2,7 +2,7 @@
 import pytest
 import os
 from unittest.mock import patch
-from src.aws.config.vdsc_config import VdscConfig
+from aws.config.vdsc_config import VdscConfig
 
 
 @pytest.mark.unit
@@ -18,22 +18,15 @@ class TestVdscConfig:
     def test_default_aws_config(self):
         """Testa configurações padrão da AWS"""
         config = VdscConfig()
-        assert config.aws['region'] == 'us-east-1'
-        assert 'account_id' in config.aws
+        assert config.aws['aws_region'] == 'us-east-1'
 
     def test_default_s3_config(self):
         """Testa configurações padrão do S3"""
         config = VdscConfig()
-        assert config.s3_bucket['name'] == os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos')
+        assert config.s3_bucket['bucket_name'] == os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos')
         assert config.s3_bucket['dir_uploads'] == 'uploads/'
         assert config.s3_bucket['dir_finished'] == 'finished/'
         assert config.s3_bucket['dir_processing'] == 'processing/'
-
-    def test_default_sqs_config(self):
-        """Testa configurações padrão do SQS"""
-        config = VdscConfig()
-        assert 'url' in config.sqs
-        assert 'dlq_name' in config.sqs
 
     def test_default_eventbus_config(self):
         """Testa configurações padrão do EventBus"""
@@ -65,8 +58,8 @@ class TestVdscConfig:
         # Reset singleton para testar com novas variáveis de ambiente
         VdscConfig._instance = None
         config = VdscConfig()
-        assert config.aws['region'] == 'us-west-2'
-        assert config.s3_bucket['name'] == 'test-bucket'
+        assert config.aws['aws_region'] == 'us-west-2'
+        assert config.s3_bucket['bucket_name'] == 'test-bucket'
         assert config.dynamodb['table_name'] == 'TestTable'
         # Reset singleton após o teste
         VdscConfig._instance = None

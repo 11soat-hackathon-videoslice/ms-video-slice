@@ -1,12 +1,12 @@
 import datetime
 
-from core.interfaces.vdsc_dataproxy_interface import VdscDataProxyInterface
+from core.interfaces.slice.slice_dataproxy_interface import SliceDataProxyInterface
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from aws.datasources.database.dynamodb_interface import DynamoDBInterface
 from aws.datasources.storage.s3_interface import S3Interface
 from aws.datasources.producer.event_producer_interface import EventProducerInterface
 
-class VdscDataProxy(VdscDataProxyInterface):
+class VdscDataProxy(SliceDataProxyInterface):
 
     def __init__(self, dynamodb: DynamoDBInterface, s3: S3Interface, event_producer: EventProducerInterface):
         self.dynamodb = dynamodb

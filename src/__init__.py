@@ -13,12 +13,12 @@ from .aws.datasources.storage.s3_repository import S3StorageRepository
 from .aws.datasources.producer.event_producer import EventProducer
 
 # Core - Adapters e Use Cases
-from core.adapters import VdscController
-from core.applications import VdscProcessUseCase
+from core.adapters.slice import SliceController
+from core.applications import SliceProcessUseCase
 
 # Core - Domain e DTOs
 from core.domain import LogEntry, VdscMetadata
-from core.dtos import EventDTO, LogEntryDTO, VdscMetadataDTO
+from core.dtos import LogEntryDTO, VdscMetadataDTO, VdscConfigDTO, VdscSettingsDTO, QualityDTO, ScheduleRulesDTO, S3ConfigDTO
 
 # Core - Enums
 from core.enums import VdscStatusEnum, VideoQuality
@@ -27,7 +27,7 @@ from core.enums import VdscStatusEnum, VideoQuality
 from core.exceptions import VdscException
 
 # Core - Interfaces
-from core.interfaces import VdscControllerInterface, VdscDataProxyInterface, VdscGatewayInferface
+from core.interfaces import SliceControllerInterface, SliceDataProxyInterface, SliceGatewayInferface
 
 __all__ = [
     # Handler Lambda
@@ -50,15 +50,19 @@ __all__ = [
     'EventProducer',
 
     # Core - Adapters e Use Cases
-    'VdscController',
-    'VdscProcessUseCase',
+    'SliceController',
+    'SliceProcessUseCase',
 
     # Core - Domain e DTOs
     'LogEntry',
     'VdscMetadata',
-    'EventDTO',
     'LogEntryDTO',
     'VdscMetadataDTO',
+    'VdscConfigDTO',
+    'VdscSettingsDTO',
+    'QualityDTO',
+    'ScheduleRulesDTO',
+    'S3ConfigDTO',
 
     # Core - Enums
     'VdscStatusEnum',
@@ -68,7 +72,7 @@ __all__ = [
     'VdscException',
 
     # Core - Interfaces
-    'VdscControllerInterface',
-    'VdscDataProxyInterface',
-    'VdscGatewayInferface',
+    'SliceControllerInterface',
+    'SliceDataProxyInterface',
+    'SliceGatewayInferface',
 ]

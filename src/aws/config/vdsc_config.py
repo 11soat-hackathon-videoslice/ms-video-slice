@@ -4,9 +4,11 @@ from aws.datasources.database.dynamodb_repository import DynamoDBRepository
 from aws.datasources.storage.s3_repository import S3StorageRepository
 from aws.datasources.producer.event_producer import EventProducer
 from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
-
-from core.adapters.vdsc_controller import VdscController
 from aws.handler.vdsc_exception_handler import VdscExceptionHandler
+
+from core.adapters.slice.slice_controller import SliceController
+from core.dtos import VdscConfigDTO, VdscSettingsDTO, QualityDTO, ScheduleRulesDTO, S3ConfigDTO
+
 
 #Varilável de ambiente VDSC_QUALITY esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
 quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
@@ -35,7 +37,7 @@ class VdscConfig:
             'dir_uploads': os.getenv('S3_BUCKET_DIR_UPLOADS', 'uploads/'),
             'dir_finished': os.getenv('S3_BUCKET_DIR_FINISHED', 'finished/'),
             'dir_processing': os.getenv('S3_BUCKET_DIR_PROCESSING', 'processing/')
-        },
+        }
         self.eventbus = {
             'name': os.getenv('EVENT_BUS_NAME', 'vdsc-prd-event-bus')
         }
@@ -74,13 +76,13 @@ class VdscConfig:
 # Configurações e repositórios
 config = VdscConfig().to_dto()
 
-dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
-s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
+dynamodb_repository = DynamoDBRepository(config.dynamodb_table_name, config.aws_region)
+s3_repository = S3StorageRepository(config.s3_bucket.bucket_name, config.aws_region)
 event_producer = EventProducer()
 vdsc_handler = VdscExceptionHandler()
 
 
 # DataProxy e Controller globais (garante passagem pela camada Controller)
 dataproxy = VdscDataProxy(dynamodb=dynamodb_repository, s3=s3_repository, event_producer=event_producer)
-controller = VdscController(dataproxy=dataproxy, handler=vdsc_handler)
+controller = SliceController(dataproxy=dataproxy, handler=vdsc_handler)
 
