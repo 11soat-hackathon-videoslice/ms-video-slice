@@ -514,10 +514,27 @@ jobs:
           echo "🚀 Iniciando build-and-deploy da Lambda via AWS CLI..."
           TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
           
+          # Verificar tamanho do pacote
+          PACKAGE_SIZE_BYTES=$(stat -c%s lambda-build-and-deployment-package.zip)
+          PACKAGE_SIZE_MB=$((PACKAGE_SIZE_BYTES / 1024 / 1024)) 
+          echo "📊 Tamanho do pacote: ${PACKAGE_SIZE_MB}MB (${PACKAGE_SIZE_BYTES} bytes)"
+          
+          echo "⬆️ Fazendo upload do pacote para S3..."
+          S3_KEY="deploy/lambda/$FUNCTION_NAME/$FUNCTION_NAME-${TIMESTAMP}.zip"
+            
+          aws s3 cp $FUNCTION_NAME.zip \
+            s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY} \
+            --region ${{ env.AWS_REGION }} \
+            --no-progress
+            
+          echo "✅ Upload para S3 concluído: s3://${{ env.S3_BUCKET_NAME }}/${S3_KEY}"
+          echo ""
+          echo "📤 Atualizando código da função Lambda via S3..."
+            
           aws lambda update-function-code \
             --function-name ${FUNCTION_NAME} \
             --s3-bucket ${{ env.S3_BUCKET_NAME }} \
-            --zip-file fileb://./${FUNCTION_NAME}.zip \
+            --s3-key ${S3_KEY} \
             --region ${{ env.AWS_REGION }} \
             --no-cli-pager
           
