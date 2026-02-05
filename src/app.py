@@ -20,9 +20,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     for record in records:
         try:
-            dynamodb_metadata = record.get('dynamodb', {}).get('NewImage', {})
+            body_raw = record.get('body', '{}')
+            if isinstance(body_raw, str):
+                body_raw = json.loads(body_raw)
+            dynamodb_metadata = body_raw.get('detail', {}).get('dynamodb', {}).get('NewImage', {})
+
+            # Valida que extraiu algum dado
             if not dynamodb_metadata:
-                dynamodb_metadata= record.get('body', {})
+                raise ValueError("Não foi possível extrair metadados do DynamoDB do evento")
+
             vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(dynamodb_metadata)
             _process_video_event(vdsc_metadata)
 

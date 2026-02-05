@@ -27,30 +27,101 @@ class TestLambdaHandler:
 
     @pytest.fixture
     def valid_dynamodb_event(self):
-        """Fixture com evento válido do DynamoDB"""
+        """Fixture com evento válido do DynamoDB do arquivo sqs_insert_event.json"""
         return {
-            'Records': [
+            "Records": [
                 {
-                    'eventID': 'evt-1',
-                    'dynamodb': {
-                        'NewImage': {
-                            'videoId': {'S': 'video123'},
-                            'fileName': {'S': 'test.mp4'},
-                            'extensionFile': {'S': 'mp4'},
-                            'status': {'S': 'uploaded'},
-                            'created': {'S': '2026-01-13T00:00:00Z'},
-                            'userId': {'S': 'user123'},
-                            'totalTime': {'N': '3600'},
-                            'unitTime': {'S': 's'},
-                            'startTime': {'N': '0'},
-                            'endTime': {'N': '60'},
-                            'timeInterval': {'L': [{'S': '00:00:00'}]},
-                            'maxRetry': {'N': '3'},
-                            'retries': {'N': '0'},
-                            'quality': {'S': 'high'},
-                            'logs': {'L': []}
+                    "messageId": "b22abd8b-bc65-49ac-ac27-35cb0c8f4e25",
+                    "receiptHandle": "AQEBiFJ77Y0/+3PQMeBB8kYsgZmx3QZ/1bXXAIfv5qQkwvWjYZXmp1QDWAJAcyCD/ZUAu7FLKoVVRSfJEkKxhqUq4Uw5qX0Ac4PgEmGd45e6v+aMSZzoLA3HFjHi+gJYGI/89EXb51c2xlZZ0fjf8wkAl+oRZnecdBt7r/3/2QpbjhnGwt/I5ffOGgn4vCgPy+E2GvH7RV01TidGoiyxwq47M7I1tkHIaZmZIOw3PyufwSh7zFUQsmXyDb2+0vTGgkTT5yjePJI14uJTCGVvopZ8cUDQ/Qgd3eNxskkBTmWscRX/bHSyzLpNxDJ0IXbamvDk296J/5TvEA1pRNQnd41T6XgGUq3Jx0nKmmWdled/T0E3Q8IZx66eiIkp0Lvfi9UiRnDlIIkv3/WnVB4DfYr4rQ==",
+                    "body": {
+                        "version": "0",
+                        "id": "5653c908-f4da-35c2-c68a-5a25febebd7d",
+                        "detail-type": "Event from aws:dynamodb",
+                        "source": "vdsc.pipe",
+                        "account": "080145351546",
+                        "time": "2026-02-05T14:25:06Z",
+                        "region": "us-east-1",
+                        "resources": [],
+                        "detail": {
+                            "eventID": "d05b753a5dbd8f0ea74593e9aece815f",
+                            "eventName": "INSERT",
+                            "eventVersion": "1.1",
+                            "eventSource": "aws:dynamodb",
+                            "awsRegion": "us-east-1",
+                            "dynamodb": {
+                                "ApproximateCreationDateTime": 1770301506,
+                                "Keys": {
+                                    "videoId": {
+                                        "S": "ml9jexx5TWrC"
+                                    }
+                                },
+                                "NewImage": {
+                                    "fileName": {
+                                        "S": "2024-07-25_16-47-46"
+                                    },
+                                    "created": {
+                                        "S": "2026-02-05 11:14:16"
+                                    },
+                                    "totalTime": {
+                                        "N": "4"
+                                    },
+                                    "videoId": {
+                                        "S": "ml9jexx5TWrC"
+                                    },
+                                    "userId": {
+                                        "S": "848834a8-20e1-7004-ee3b-4ba1495239d8"
+                                    },
+                                    "quality": {
+                                        "S": "medium"
+                                    },
+                                    "maxRetry": {
+                                        "N": "3"
+                                    },
+                                    "retries": {
+                                        "N": "0"
+                                    },
+                                    "extensionFile": {
+                                        "S": "mp4"
+                                    },
+                                    "timeInterval": {
+                                        "L": [
+                                            {
+                                                "S": "1"
+                                            }
+                                        ]
+                                    },
+                                    "startTime": {
+                                        "N": "0"
+                                    },
+                                    "endTime": {
+                                        "N": "4"
+                                    },
+                                    "status": {
+                                        "S": "UPLOADED"
+                                    },
+                                    "unitTime": {
+                                        "S": "s"
+                                    }
+                                },
+                                "SequenceNumber": "102042700003665459637771224",
+                                "SizeBytes": 250,
+                                "StreamViewType": "NEW_AND_OLD_IMAGES"
+                            },
+                            "eventSourceARN": "arn:aws:dynamodb:us-east-1:080145351546:table/VideoSlice/stream/2026-01-26T20:20:36.322"
                         }
-                    }
+                    },
+                    "attributes": {
+                        "ApproximateReceiveCount": "1",
+                        "SentTimestamp": "1770301506645",
+                        "SenderId": "AROARFKIJAN5FITLMQ6SR:0ae57debe57431e69bbf0909913a2646",
+                        "ApproximateFirstReceiveTimestamp": "1770301506652"
+                    },
+                    "messageAttributes": {},
+                    "md5OfMessageAttributes": None,
+                    "md5OfBody": "f406634cb996416eb193d84c19842dfe",
+                    "eventSource": "aws:sqs",
+                    "eventSourceARN": "arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice",
+                    "awsRegion": "us-east-1"
                 }
             ]
         }
@@ -97,6 +168,71 @@ class TestLambdaHandler:
             body = json.loads(result['body'])
             assert 'error' in body
 
+    def test_lambda_handler_with_sqs_event(self):
+        """Testa lambda_handler com evento vindo do SQS (body como string JSON)"""
+        context = Mock()
+        dynamodb_payload = {
+            'videoId': {'S': 'video123'},
+            'fileName': {'S': 'test.mp4'},
+            'extensionFile': {'S': 'mp4'},
+            'status': {'S': 'uploaded'},
+            'created': {'S': '2026-01-13T00:00:00Z'},
+            'userId': {'S': 'user123'},
+            'totalTime': {'N': '3600'},
+            'unitTime': {'S': 's'},
+            'startTime': {'N': '0'},
+            'endTime': {'N': '60'},
+            'timeInterval': {'L': [{'S': '00:00:00'}]},
+            'maxRetry': {'N': '3'},
+            'retries': {'N': '0'},
+            'quality': {'S': 'high'},
+            'logs': {'L': []}
+        }
+
+        sqs_event = {
+            'Records': [
+                {
+                    'messageId': 'msg123',
+                    'body': json.dumps({
+                        'detail': {
+                            'dynamodb': {
+                                'NewImage': dynamodb_payload
+                            }
+                        }
+                    })
+                }
+            ]
+        }
+
+        with patch('src.app._process_video_event') as mock_process_event:
+            mock_process_event.return_value = None
+            result = lambda_handler(sqs_event, context)
+            assert result['statusCode'] == 202
+            body = json.loads(result['body'])
+            assert 'status' in body
+            mock_process_event.assert_called_once()
+
+    def test_lambda_handler_with_invalid_sqs_event(self):
+        """Testa lambda_handler com evento SQS que não contém NewImage"""
+        context = Mock()
+        sqs_event = {
+            'Records': [
+                {
+                    'messageId': 'msg123',
+                    'body': json.dumps({
+                        'detail': {
+                            'dynamodb': {}
+                        }
+                    })
+                }
+            ]
+        }
+
+        result = lambda_handler(sqs_event, context)
+        assert result['statusCode'] == 500
+        body = json.loads(result['body'])
+        assert 'error' in body
+
 
 class TestAppInternals:
 
@@ -131,5 +267,47 @@ class TestAppInternals:
             _process_video_event(mock_metadata)
             assert mock_logger.error.called
             mock_controller.handler.handle_exception.assert_called_once()
+
+    def test__process_video_event_with_cleanup(self):
+        """Testa processamento com limpeza de arquivos temporários"""
+        mock_metadata = MagicMock()
+        mock_metadata.video_id = 'vid123'
+
+        # Simular retorno de listdir com arquivos
+        files_to_clean = ['file1.tmp', 'file2.tmp']
+
+        with patch('src.app.controller') as mock_controller, \
+             patch('src.app.config') as mock_config, \
+             patch('src.app.logger') as mock_logger, \
+             patch('os.path.isdir', return_value=True), \
+             patch('os.listdir', return_value=files_to_clean), \
+             patch('os.path.isfile', return_value=True), \
+             patch('os.unlink') as mock_unlink, \
+             patch('shutil.rmtree') as mock_rmtree:
+
+            _process_video_event(mock_metadata)
+
+            # Valida que tentou limpar os arquivos
+            assert mock_unlink.called
+            mock_logger.info.assert_any_call('Processamento concluído para vídeo ID: vid123')
+
+    def test__process_video_event_cleanup_error(self):
+        """Testa limpeza de filesystem mesmo com erro"""
+        mock_metadata = MagicMock()
+        mock_metadata.video_id = 'vid456'
+
+        with patch('src.app.controller') as mock_controller, \
+             patch('src.app.logger') as mock_logger, \
+             patch('os.listdir', return_value=[]) as mock_listdir, \
+             patch('os.path.isfile', return_value=False), \
+             patch('os.path.isdir', return_value=False), \
+             patch('os.unlink') as mock_unlink, \
+             patch('shutil.rmtree') as mock_rmtree:
+
+            mock_controller.video_slice_processing.side_effect = Exception('processing error')
+            _process_video_event(mock_metadata)
+
+            # Valida que tentou limpar mesmo com erro
+            mock_logger.error.assert_called()
 
 

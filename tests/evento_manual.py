@@ -1,22 +1,26 @@
 import sys
 import os
 import json
+from pathlib import Path
 
+# Adicionar path para o diretório src do ms-video-slice
+src_path = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(src_path))
 
-
-# Adicionar path (se necessário)
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Adicionar path para o diretório src do video-slice-core
+core_src_path = Path(__file__).parent.parent.parent / "video-slice-core" / "src"
+sys.path.insert(0, str(core_src_path))
 
 # ============================================================
 # EXEMPLO 1: Atualizar Metadados Completos
 # ============================================================
 def exemplo_atualizacao_completa():
     """Exemplo de atualização completa de metadados no formato DynamoDB"""
-    from src.app import lambda_handler
+    from app import lambda_handler
     os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/mkx8zj81Eq9o.mp4 s3://vdsc-prd-s3-videos/uploads/mkx8zj81Eq9o.mp4')
 
     # Caminho do arquivo JSON com o evento do DynamoDB
-    json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_insert.json')
+    json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'sqs_insert_event.json')
 
     # Ler o conteúdo do arquivo JSON
     print(f"Carregando evento do arquivo: {json_file_path}")

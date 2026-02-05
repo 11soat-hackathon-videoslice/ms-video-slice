@@ -1,8 +1,15 @@
 import sys
 import os
 import json
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../video-slice-core/src')))
+# Adicionar path para o diretório src do ms-video-slice
+src_path = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(src_path))
+
+# Adicionar path para o diretório src do video-slice-core
+core_src_path = Path(__file__).parent.parent.parent / "video-slice-core" / "src"
+sys.path.insert(0, str(core_src_path))
 
 from core.utils import get_event_schedule_timestamp
 from core.dtos import VdscMetadataDTO
