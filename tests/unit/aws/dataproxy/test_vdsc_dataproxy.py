@@ -141,7 +141,7 @@ class TestVdscDataProxy:
         assert result == mock_dto
         mock_dynamodb.update_metadata_by_video_id.assert_called_once_with(mock_dto)
 
-    @patch('threading.Thread')
+    @patch('src.aws.dataproxy.vdsc_dataproxy.threading.Thread')
     def test_send_notification(self, mock_thread_class, dataproxy, mock_event_producer):
         """Testa envio de notificação com threading"""
         mock_notification = Mock(spec=NotificationDto)
@@ -157,7 +157,7 @@ class TestVdscDataProxy:
         )
         mock_thread_instance.start.assert_called_once()
 
-    @patch('threading.Thread')
+    @patch('src.aws.dataproxy.vdsc_dataproxy.threading.Thread')
     def test_send_notification_delegates_to_event_producer(self, mock_thread_class, dataproxy, mock_event_producer):
         """Testa que send_notification delega corretamente para event_producer em uma thread"""
         mock_notification = Mock(spec=NotificationDto)
