@@ -120,7 +120,7 @@ class TestEventProducer:
         event_producer._event_producer.put_events.assert_called_once()
         call_args = event_producer._event_producer.put_events.call_args
         assert call_args[1]['Entries'][0]['Source'] == 'vdsc.notification'
-        assert call_args[1]['Entries'][0]['DetailType'] == 'Notification'
+        assert call_args[1]['Entries'][0]['DetailType'] == 'VideoSlice Notification'
         assert call_args[1]['Entries'][0]['EventBusName'] == 'test-event-bus'
 
     def test_send_notification_error_handling(self, event_producer):
