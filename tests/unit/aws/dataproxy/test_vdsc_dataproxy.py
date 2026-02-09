@@ -1,8 +1,9 @@
 """Testes unitários para VdscDataProxy"""
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from src.aws.dataproxy.vdsc_dataproxy import VdscDataProxy, dict_to_dynamodb_format
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
+from core.dtos.notification_dto import NotificationDto
 
 
 @pytest.mark.unit
@@ -140,77 +141,38 @@ class TestVdscDataProxy:
         assert result == mock_dto
         mock_dynamodb.update_metadata_by_video_id.assert_called_once_with(mock_dto)
 
-    def test_send_notification(self, dataproxy):
-        """Testa envio de notificação (implementação vazia)"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email", "sms"]
-        message = "Vídeo processado com sucesso"
+    @patch('threading.Thread')
+    def test_send_notification(self, mock_thread_class, dataproxy, mock_event_producer):
+        """Testa envio de notificação com threading"""
+        mock_notification = Mock(spec=NotificationDto)
+        mock_thread_instance = Mock()
+        mock_thread_class.return_value = mock_thread_instance
 
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
+        dataproxy.send_notification(mock_notification)
 
-    def test_send_notification_with_single_channel(self, dataproxy):
-        """Testa envio de notificação com um único canal"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email"]
-        message = "Notificação importante"
+        mock_thread_class.assert_called_once_with(
+            target=mock_event_producer.send_notification,
+            args=(mock_notification,),
+            daemon=True
+        )
+        mock_thread_instance.start.assert_called_once()
 
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
+    @patch('threading.Thread')
+    def test_send_notification_delegates_to_event_producer(self, mock_thread_class, dataproxy, mock_event_producer):
+        """Testa que send_notification delega corretamente para event_producer em uma thread"""
+        mock_notification = Mock(spec=NotificationDto)
+        mock_thread_instance = Mock()
+        mock_thread_class.return_value = mock_thread_instance
 
-    def test_send_notification_with_multiple_channels(self, dataproxy):
-        """Testa envio de notificação com múltiplos canais"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email", "sms", "push", "webhook"]
-        message = "Atualização de status"
+        dataproxy.send_notification(mock_notification)
 
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
+        mock_thread_class.assert_called_once_with(
+            target=mock_event_producer.send_notification,
+            args=(mock_notification,),
+            daemon=True
+        )
+        mock_thread_instance.start.assert_called_once()
 
-    def test_send_notification_with_empty_channels(self, dataproxy):
-        """Testa envio de notificação com lista de canais vazia"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = []
-        message = "Mensagem sem canais"
-
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
-
-    def test_send_notification_with_empty_message(self, dataproxy):
-        """Testa envio de notificação com mensagem vazia"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email"]
-        message = ""
-
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
-
-    def test_send_notification_with_long_message(self, dataproxy):
-        """Testa envio de notificação com mensagem longa"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email", "sms"]
-        message = "A" * 1000  # Mensagem muito longa
-
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
-
-    def test_send_notification_with_special_characters(self, dataproxy):
-        """Testa envio de notificação com caracteres especiais"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email"]
-        message = "Notificação com caracteres especiais: @#$%&*()_+-=[]{}|;:',.<>?/~`"
-
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
-
-    def test_send_notification_with_unicode_characters(self, dataproxy):
-        """Testa envio de notificação com caracteres Unicode"""
-        mock_metadata = Mock(spec=VdscMetadataDTO)
-        channels = ["email"]
-        message = "Notificação com caracteres: áéíóú ñ ü 中文 日本語 한국어"
-
-        result = dataproxy.send_notification(mock_metadata, channels, message)
-        assert result is None
 
 
 @pytest.mark.unit

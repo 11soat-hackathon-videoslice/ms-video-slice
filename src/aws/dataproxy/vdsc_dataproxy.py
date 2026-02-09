@@ -1,7 +1,10 @@
+import threading
+
 import datetime
 
 from core.interfaces.slice.slice_dataproxy_interface import SliceDataProxyInterface
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
+from core.dtos.notification_dto import NotificationDto
 from aws.datasources.database.dynamodb_interface import DynamoDBInterface
 from aws.datasources.storage.s3_interface import S3Interface
 from aws.datasources.producer.event_producer_interface import EventProducerInterface
@@ -37,8 +40,8 @@ class VdscDataProxy(SliceDataProxyInterface):
     def send_schedule_retry_event(self, vdsc_metadata: VdscMetadataDTO, schedule_time: datetime, schedule_config: dict) -> None:
         self.event_producer.send_schedule_retry_event(vdsc_metadata.to_dynamodb_item(), schedule_time, schedule_config)
 
-    def send_notification(self, vdsc_metadata:VdscMetadataDTO, channels: list[str], message: str) -> None:
-        pass
+    def send_notification(self, notification: NotificationDto) -> None:
+        threading.Thread(target=self.event_producer.send_notification, args=(notification,), daemon=True).start()
 
     def update_metadata_by_video_id(self, update_data: VdscMetadataDTO) -> VdscMetadataDTO:
         """Atualiza metadados recebendo e retornando DTO"""
