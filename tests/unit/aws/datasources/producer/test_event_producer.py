@@ -1,8 +1,10 @@
 """Testes unitários para EventProducer"""
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from src.aws.datasources.producer.event_producer import EventProducer
+from core.dtos.notification_dto import NotificationDto
+from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 
 
 @pytest.mark.unit
@@ -96,13 +98,48 @@ class TestEventProducer:
             event_producer.send_schedule_retry_event(metadata_dynamodb, schedule_time, schedule_config)
 
     def test_send_notification(self, event_producer):
-        """Testa envio de notificação (implementação vazia)"""
-        metadata = {"videoId": "123"}
-        channels = ["email", "sms"]
-        message = "Vídeo processado"
+        """Testa envio de notificação para EventBridge"""
+        # Mock do event_producer cliente
+        event_producer._event_producer = Mock()
+        event_producer._event_producer.put_events = Mock(return_value={'FailedEntryCount': 0})
 
-        # A implementação é vazia, então apenas verifica que não gera erro
-        result = event_producer.send_notification(metadata, channels, message)
-        assert result is None
+        # Mock do config
+        mock_config = MagicMock()
+        mock_config.event_bus_name = 'test-event-bus'
+        event_producer._config = mock_config
+
+        # Criar NotificationDto de teste
+        metadata_mock = Mock(spec=VdscMetadataDTO)
+        notification = Mock(spec=NotificationDto)
+        notification.to_dict = Mock(return_value={'id': '123', 'channels': ['email'], 'metadata': {}, 'content': []})
+
+        # Executar o método
+        event_producer.send_notification(notification)
+
+        # Verificar que put_events foi chamado
+        event_producer._event_producer.put_events.assert_called_once()
+        call_args = event_producer._event_producer.put_events.call_args
+        assert call_args[1]['Entries'][0]['Source'] == 'vdsc.notification'
+        assert call_args[1]['Entries'][0]['DetailType'] == 'Notification'
+        assert call_args[1]['Entries'][0]['EventBusName'] == 'test-event-bus'
+
+    def test_send_notification_error_handling(self, event_producer):
+        """Testa tratamento de erro ao enviar notificação"""
+        # Mock do event_producer cliente com erro
+        event_producer._event_producer = Mock()
+        event_producer._event_producer.put_events = Mock(side_effect=Exception("EventBridge error"))
+
+        # Mock do config
+        mock_config = MagicMock()
+        mock_config.event_bus_name = 'test-event-bus'
+        event_producer._config = mock_config
+
+        # Criar NotificationDto de teste
+        notification = Mock(spec=NotificationDto)
+        notification.to_dict = Mock(return_value={'id': '123'})
+
+        # Deve lançar exceção
+        with pytest.raises(Exception, match="EventBridge error"):
+            event_producer.send_notification(notification)
 
 

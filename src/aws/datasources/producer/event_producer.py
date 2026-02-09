@@ -3,6 +3,7 @@ import json
 import boto3, logging
 
 from .event_producer_interface import EventProducerInterface
+from core.dtos.notification_dto import NotificationDto
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,16 @@ class EventProducer(EventProducerInterface):
 
     def __init__(self) -> None:
         self._scheduler = None
+        self._event_producer = None
+        self._config = None
+
+    @property
+    def config(self):
+        """Lazy loading da configuração VdscConfig"""
+        if self._config is None:
+            from aws.config.vdsc_config import VdscConfig
+            self._config = VdscConfig().to_dto()
+        return self._config
 
     @property
     def scheduler(self):
@@ -18,10 +29,42 @@ class EventProducer(EventProducerInterface):
             self._scheduler = boto3.client('scheduler')
         return self._scheduler
 
+    @property
+    def event_producer(self):
+        """Lazy loading do cliente boto3 eventbridge"""
+        if self._event_producer is None:
+            self._event_producer = boto3.client('events',verify=False)
+        return self._event_producer
+
     @scheduler.setter
     def scheduler(self, value):
         """Setter para permitir mock do cliente nos testes"""
         self._scheduler = value
+
+    @event_producer.setter
+    def event_producer(self, value):
+        self._event_producer = value
+
+
+    def send_notification(self, notification: NotificationDto) -> None:
+        detail = notification.to_json()
+        logger.info(f"Criando notificação para EventBridge com dados: {detail}")
+        try:
+            response = self.event_producer.put_events(
+                Entries=[
+                    {
+                        'Source': 'vdsc.notification',
+                        'DetailType': 'VideoSlice Notification',
+                        'Detail': notification.to_json(),
+                        'EventBusName': self.config.event_bus_name
+                    }
+                ]
+            )
+
+            logger.info(f"Notificação enviada para EventBridge com sucesso: {response}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar notificação para EventBridge: {str(e)}", exc_info=True)
+            raise
 
     def send_schedule_retry_event(self, event_data, schedule_time: datetime, schedule_config: dict):
         logger.info(f"Formatando EventBridge Scheduler com dados: {event_data} e horário agendado: {schedule_time}")
@@ -51,9 +94,6 @@ class EventProducer(EventProducerInterface):
             }
         }
         self._send_schedule_event(scheduler)
-
-    def send_notification(self, event_data: dict, channels: list[str], mensagem) -> None:
-        pass
 
     def _send_schedule_event(self, scheduler) -> None:
         try:

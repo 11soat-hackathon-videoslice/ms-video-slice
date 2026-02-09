@@ -1,5 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod
+from core.dtos import NotificationDto
 
 class EventProducerInterface(ABC):
 
@@ -8,5 +9,5 @@ class EventProducerInterface(ABC):
         pass
 
     @abstractmethod
-    def send_notification(self, event_data: dict, channel: str, mensagem ) -> None:
+    def send_notification(self, notification: NotificationDto ) -> None:
         pass
