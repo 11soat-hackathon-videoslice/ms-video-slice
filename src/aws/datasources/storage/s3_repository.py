@@ -1,5 +1,6 @@
 import logging
 import boto3
+from botocore.exceptions import ClientError
 
 from .s3_interface import S3Interface
 from boto3.resources.collection import ResourceCollection
@@ -89,13 +90,14 @@ class S3StorageRepository(S3Interface):
 
 
     def move_file(self, source_path: str, destination_path: str) -> None:
-        """Move um arquivo de um local para outro no S3"""
+        if self._check_file_location(source_path) == False and self._check_file_location(destination_path) == True:
+            logger.warning(f"Video localizado em s3://{self.bucket_name}/{destination_path} e não localizado em s3://{self.bucket_name}/{source_path}. Pulando etapa de movimentação.")
+            return None
         try:
-
-            copy_source = {'Bucket': self.bucket_name,'Key': source_path}
-            self.s3_client.copy_object(CopySource=copy_source,Bucket=self.bucket_name,Key=destination_path)
-            self.s3_client.delete_object(Bucket=self.bucket_name,Key=source_path)
-            logger.info(f"Arquivo movido de s3://{self.bucket_name}/{source_path} para s3://{self.bucket_name}/{destination_path}")
+                copy_source = {'Bucket': self.bucket_name,'Key': source_path}
+                self.s3_client.copy_object(CopySource=copy_source,Bucket=self.bucket_name,Key=destination_path)
+                self.s3_client.delete_object(Bucket=self.bucket_name,Key=source_path)
+                logger.info(f"Arquivo movido de s3://{self.bucket_name}/{source_path} para s3://{self.bucket_name}/{destination_path}")
 
         except Exception as e:
             logger.error(f"Erro ao mover arquivo de {source_path} para {destination_path}: {str(e)}", exc_info=True)
@@ -123,6 +125,16 @@ class S3StorageRepository(S3Interface):
             logger.error(f"Erro ao salvar arquivo {file_path}: {str(e)}", exc_info=True)
             raise
 
+    def _check_file_location(self, file_path: str) -> bool:
+        try:
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=file_path)
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                logger.warning(f"Não encontrado arquivo em s3://{self.bucket_name}/{file_path}")
+            return False
+
+
     def _get_list_files_in_directory(self, directory_path: str) -> ResourceCollection:
         """Obtém lista de arquivos em um diretório do S3"""
         try:
@@ -131,5 +143,4 @@ class S3StorageRepository(S3Interface):
         except Exception as e:
             logger.error(f"Erro ao listar arquivos do diretório {directory_path}: {str(e)}", exc_info=True)
             raise
-
 
