@@ -60,7 +60,7 @@ class EventProducer(EventProducerInterface):
                     }
                 ]
             )
-
+            response.raise_for_status()
             logger.info(f"Notificação enviada para EventBridge com sucesso: {response}")
         except Exception as e:
             logger.error(f"Erro ao enviar notificação para EventBridge: {str(e)}", exc_info=True)
