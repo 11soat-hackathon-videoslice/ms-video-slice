@@ -138,8 +138,8 @@ class TestEventProducer:
         notification = Mock(spec=NotificationDto)
         notification.to_dict = Mock(return_value={'id': '123'})
 
-        # Deve lançar exceção
-        with pytest.raises(Exception, match="EventBridge error"):
-            event_producer.send_notification(notification)
+        # O método deve completar sem lançar exceção, apenas logar o erro
+        event_producer.send_notification(notification)
 
-
+        # Verificar que put_events foi chamado
+        event_producer._event_producer.put_events.assert_called_once()
