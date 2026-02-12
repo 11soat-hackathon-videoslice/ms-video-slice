@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 import json
 import boto3, logging
@@ -32,8 +33,13 @@ class EventProducer(EventProducerInterface):
     @property
     def event_producer(self):
         """Lazy loading do cliente boto3 eventbridge"""
+        """Desabilita a verificação SSL para conexões locais, como LocalStack ou AWS SAM Local"""
+        ssl_verify = False
+        if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+            ssl_verify = True
+
         if self._event_producer is None:
-            self._event_producer = boto3.client('events',verify=False)
+            self._event_producer = boto3.client('events',verify=ssl_verify)
         return self._event_producer
 
     @scheduler.setter
@@ -66,7 +72,6 @@ class EventProducer(EventProducerInterface):
             logger.info(f"Notificação enviada para EventBridge com sucesso: {response}")
         except Exception as e:
             logger.error(f"Erro ao enviar notificação para EventBridge: {str(e)}", exc_info=True)
-            raise
 
     def send_schedule_retry_event(self, event_data, schedule_time: datetime, schedule_config: dict):
         logger.info(f"Formatando EventBridge Scheduler com dados: {event_data} e horário agendado: {schedule_time}")

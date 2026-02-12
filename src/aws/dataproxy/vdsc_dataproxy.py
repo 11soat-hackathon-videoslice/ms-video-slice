@@ -1,5 +1,3 @@
-import threading
-
 import datetime
 
 from core.interfaces.slice.slice_dataproxy_interface import SliceDataProxyInterface
@@ -41,7 +39,7 @@ class VdscDataProxy(SliceDataProxyInterface):
         self.event_producer.send_schedule_retry_event(vdsc_metadata.to_dynamodb_item(), schedule_time, schedule_config)
 
     def send_notification(self, notification: NotificationDto) -> None:
-        threading.Thread(target=self.event_producer.send_notification, args=(notification,), daemon=True).start()
+        self.event_producer.send_notification(notification)
 
     def update_metadata_by_video_id(self, update_data: VdscMetadataDTO) -> VdscMetadataDTO:
         """Atualiza metadados recebendo e retornando DTO"""

@@ -1,6 +1,6 @@
 """Testes unitários para VdscDataProxy"""
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from src.aws.dataproxy.vdsc_dataproxy import VdscDataProxy, dict_to_dynamodb_format
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from core.dtos.notification_dto import NotificationDto
@@ -141,38 +141,21 @@ class TestVdscDataProxy:
         assert result == mock_dto
         mock_dynamodb.update_metadata_by_video_id.assert_called_once_with(mock_dto)
 
-    @patch('src.aws.dataproxy.vdsc_dataproxy.threading.Thread')
-    def test_send_notification(self, mock_thread_class, dataproxy, mock_event_producer):
-        """Testa envio de notificação com threading"""
+    def test_send_notification(self, dataproxy, mock_event_producer):
+        """Testa envio de notificação"""
         mock_notification = Mock(spec=NotificationDto)
-        mock_thread_instance = Mock()
-        mock_thread_class.return_value = mock_thread_instance
 
         dataproxy.send_notification(mock_notification)
 
-        mock_thread_class.assert_called_once_with(
-            target=mock_event_producer.send_notification,
-            args=(mock_notification,),
-            daemon=True
-        )
-        mock_thread_instance.start.assert_called_once()
+        mock_event_producer.send_notification.assert_called_once_with(mock_notification)
 
-    @patch('src.aws.dataproxy.vdsc_dataproxy.threading.Thread')
-    def test_send_notification_delegates_to_event_producer(self, mock_thread_class, dataproxy, mock_event_producer):
-        """Testa que send_notification delega corretamente para event_producer em uma thread"""
+    def test_send_notification_delegates_to_event_producer(self, dataproxy, mock_event_producer):
+        """Testa que send_notification delega corretamente para event_producer"""
         mock_notification = Mock(spec=NotificationDto)
-        mock_thread_instance = Mock()
-        mock_thread_class.return_value = mock_thread_instance
 
         dataproxy.send_notification(mock_notification)
 
-        mock_thread_class.assert_called_once_with(
-            target=mock_event_producer.send_notification,
-            args=(mock_notification,),
-            daemon=True
-        )
-        mock_thread_instance.start.assert_called_once()
-
+        mock_event_producer.send_notification.assert_called_once_with(mock_notification)
 
 
 @pytest.mark.unit

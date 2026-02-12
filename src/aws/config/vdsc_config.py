@@ -47,6 +47,7 @@ class VdscConfig:
         self.vdsc = {
             'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
             'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
+            'max_workers': int(os.getenv('VDSC_MAX_WORKERS', '10')),
             'quality':quality,
             'schedule_event_rules': schedule_event_rules
         }
@@ -68,6 +69,7 @@ class VdscConfig:
             vdsc=VdscSettingsDTO(
                 png_compression_level=self.vdsc['png_compression_level'],
                 zip_compression_level=self.vdsc['zip_compression_level'],
+                max_workers=self.vdsc['max_workers'],
                 quality=quality_obj,
                 schedule_event_rules=schedule_obj
             )
