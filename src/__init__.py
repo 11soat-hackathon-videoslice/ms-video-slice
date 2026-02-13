@@ -1,78 +1,25 @@
-# Handler Lambda
-from .aws.handler.vdsc_exception_handler import VdscExceptionHandler
+from . import app
+from . import aws
 
-# Configurações
-from .aws.config.vdsc_config import VdscConfig, config, dynamodb_repository, s3_repository, event_producer, vdsc_handler
+from .app import (lambda_handler, logger,)
+from .aws import (DynamoDBInterface, DynamoDBRepository, EventProducer,
+                  EventProducerInterface, StorageInterface,
+                  StorageStorageRepository, SliceVdscConfig, SliceDataProxy,
+                  VdscExceptionHandler, config, controller, database,
+                  dataproxy, datasources, dict_to_dynamodb_format,
+                  dynamodb_interface, dynamodb_repository, event_producer,
+                  event_producer_interface, handler, logger, producer, quality,
+                  s3_repository, schedule_event_rules, storage,
+                  storage_interface, storage_repository, slice_config,
+                  slice_dataproxy, vdsc_exception_handler, vdsc_handler, )
 
-# DataProxy
-from .aws.dataproxy.vdsc_dataproxy import VdscDataProxy
-
-# Repositórios
-from .aws.datasources.database.dynamodb_repository import DynamoDBRepository
-from .aws.datasources.storage.s3_repository import S3StorageRepository
-from .aws.datasources.producer.event_producer import EventProducer
-
-# Core - Adapters e Use Cases
-from core.adapters.slice import SliceController
-from core.applications import SliceProcessUseCase
-
-# Core - Domain e DTOs
-from core.domain import LogEntry, VdscMetadata
-from core.dtos import LogEntryDTO, VdscMetadataDTO, VdscConfigDTO, VdscSettingsDTO, QualityDTO, ScheduleRulesDTO, S3ConfigDTO
-
-# Core - Enums
-from core.enums import VdscStatusEnum, VideoQuality
-
-# Core - Exceptions
-from core.exceptions import VdscException
-
-# Core - Interfaces
-from core.interfaces import SliceControllerInterface, SliceDataProxyInterface, SliceGatewayInferface
-
-__all__ = [
-    # Handler Lambda
-    'VdscExceptionHandler',
-
-    # Configurações
-    'VdscConfig',
-    'config',
-    'dynamodb_repository',
-    's3_repository',
-    'event_producer',
-    'vdsc_handler',
-
-    # DataProxy
-    'VdscDataProxy',
-
-    # Repositórios
-    'DynamoDBRepository',
-    'S3StorageRepository',
-    'EventProducer',
-
-    # Core - Adapters e Use Cases
-    'SliceController',
-    'SliceProcessUseCase',
-
-    # Core - Domain e DTOs
-    'LogEntry',
-    'VdscMetadata',
-    'LogEntryDTO',
-    'VdscMetadataDTO',
-    'VdscConfigDTO',
-    'VdscSettingsDTO',
-    'QualityDTO',
-    'ScheduleRulesDTO',
-    'S3ConfigDTO',
-
-    # Core - Enums
-    'VdscStatusEnum',
-    'VideoQuality',
-
-    # Core - Exceptions
-    'VdscException',
-
-    # Core - Interfaces
-    'SliceControllerInterface',
-    'SliceDataProxyInterface',
-    'SliceGatewayInferface',
-]
+__all__ = ['DynamoDBInterface', 'DynamoDBRepository', 'EventProducer',
+           'EventProducerInterface', 'StorageInterface',
+           'StorageStorageRepository', 'SliceVdscConfig', 'SliceDataProxy',
+           'VdscExceptionHandler', 'app', 'aws', 'config', 'controller',
+           'database', 'dataproxy', 'datasources', 'dict_to_dynamodb_format',
+           'dynamodb_interface', 'dynamodb_repository', 'event_producer',
+           'event_producer_interface', 'handler', 'lambda_handler', 'logger',
+           'producer', 'quality', 's3_repository', 'schedule_event_rules',
+           'storage', 'storage_interface', 'storage_repository', 'slice_config',
+           'slice_dataproxy', 'vdsc_exception_handler', 'vdsc_handler']

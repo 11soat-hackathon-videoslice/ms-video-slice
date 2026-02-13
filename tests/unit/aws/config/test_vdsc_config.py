@@ -2,7 +2,7 @@
 import pytest
 import os
 from unittest.mock import patch
-from aws.config.vdsc_config import VdscConfig
+from aws.config.slice_config import SliceVdscConfig
 
 
 @pytest.mark.unit
@@ -11,36 +11,36 @@ class TestVdscConfig:
 
     def test_singleton_pattern(self):
         """Testa se VdscConfig implementa o padrão Singleton"""
-        config1 = VdscConfig()
-        config2 = VdscConfig()
+        config1 = SliceVdscConfig()
+        config2 = SliceVdscConfig()
         assert config1 is config2
 
     def test_default_aws_config(self):
         """Testa configurações padrão da AWS"""
-        config = VdscConfig()
+        config = SliceVdscConfig()
         assert config.aws['aws_region'] == 'us-east-1'
 
     def test_default_s3_config(self):
         """Testa configurações padrão do S3"""
-        config = VdscConfig()
+        config = SliceVdscConfig()
         assert config.s3_bucket['bucket_name'] == os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos')
-        assert config.s3_bucket['dir_uploads'] == 'uploads/'
-        assert config.s3_bucket['dir_finished'] == 'finished/'
-        assert config.s3_bucket['dir_processing'] == 'processing/'
+        assert config.vdsc['dir_uploads'] == 'uploads'
+        assert config.vdsc['dir_finished'] == 'finished'
+        assert config.vdsc['dir_tmp'] == '/tmp'
 
     def test_default_eventbus_config(self):
         """Testa configurações padrão do EventBus"""
-        config = VdscConfig()
+        config = SliceVdscConfig()
         assert config.eventbus['name'] == os.getenv('EVENT_BUS_NAME', 'vdsc-prd-event-bus')
 
     def test_default_dynamodb_config(self):
         """Testa configurações padrão do DynamoDB"""
-        config = VdscConfig()
+        config = SliceVdscConfig()
         assert config.dynamodb['table_name'] == os.getenv('DYNAMODB_TABLE_NAME', 'VideoSlice')
 
     def test_default_vdsc_config(self):
         """Testa configurações padrão de processamento de vídeo"""
-        config = VdscConfig()
+        config = SliceVdscConfig()
         assert config.vdsc['png_compression_level'] == 9
         assert config.vdsc['zip_compression_level'] == 5
         assert config.vdsc['quality']['ultra'] == 1080
@@ -56,11 +56,11 @@ class TestVdscConfig:
     def test_environment_variables_override(self):
         """Testa se variáveis de ambiente sobrescrevem valores padrão"""
         # Reset singleton para testar com novas variáveis de ambiente
-        VdscConfig._instance = None
-        config = VdscConfig()
+        SliceVdscConfig._instance = None
+        config = SliceVdscConfig()
         assert config.aws['aws_region'] == 'us-west-2'
         assert config.s3_bucket['bucket_name'] == 'test-bucket'
         assert config.dynamodb['table_name'] == 'TestTable'
         # Reset singleton após o teste
-        VdscConfig._instance = None
+        SliceVdscConfig._instance = None
 

@@ -1,7 +1,7 @@
 """Testes unitários para VdscDataProxy"""
 import pytest
 from unittest.mock import Mock
-from src.aws.dataproxy.vdsc_dataproxy import VdscDataProxy, dict_to_dynamodb_format
+from src.aws.dataproxy.slice_dataproxy import SliceDataProxy, dict_to_dynamodb_format
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from core.dtos.notification_dto import NotificationDto
 
@@ -28,33 +28,16 @@ class TestVdscDataProxy:
     @pytest.fixture
     def dataproxy(self, mock_dynamodb, mock_s3, mock_event_producer):
         """Fixture para criar instância do DataProxy"""
-        return VdscDataProxy(
+        return SliceDataProxy(
             dynamodb=mock_dynamodb,
-            s3=mock_s3,
+            storage=mock_s3,
             event_producer=mock_event_producer
         )
-
-    def test_create_directory(self, dataproxy, mock_s3):
-        """Testa criação de diretório"""
-        dataproxy.create_directory("test/path/")
-        mock_s3.create_directory.assert_called_once_with("test/path/")
 
     def test_delete_file(self, dataproxy, mock_s3):
         """Testa deleção de arquivo"""
         dataproxy.delete_file("test/file.txt")
         mock_s3.delete_file.assert_called_once_with("test/file.txt")
-
-    def test_delete_files_by_directory(self, dataproxy, mock_s3):
-        """Testa deleção de arquivos por diretório"""
-        dataproxy.delete_files_by_directory("test/dir/")
-        mock_s3.delete_files_by_directory.assert_called_once_with("test/dir/")
-
-    def test_get_list_paths_by_directory(self, dataproxy, mock_s3):
-        """Testa obtenção de lista de caminhos por diretório"""
-        mock_s3.get_list_paths_by_directory.return_value = ["file1.txt", "file2.txt"]
-        result = dataproxy.get_list_paths_by_directory("test/dir/")
-        assert result == ["file1.txt", "file2.txt"]
-        mock_s3.get_list_paths_by_directory.assert_called_once_with("test/dir/")
 
     def test_open_file(self, dataproxy, mock_s3):
         """Testa abertura de arquivo"""
@@ -62,11 +45,6 @@ class TestVdscDataProxy:
         result = dataproxy.open_file("test/file.txt")
         assert result == b"file content"
         mock_s3.open_file.assert_called_once_with("test/file.txt")
-
-    def test_move_file(self, dataproxy, mock_s3):
-        """Testa movimentação de arquivo"""
-        dataproxy.move_file("source.txt", "destination.txt")
-        mock_s3.move_file.assert_called_once_with("source.txt", "destination.txt")
 
     def test_save_file(self, dataproxy, mock_s3):
         """Testa salvamento de arquivo"""
@@ -156,6 +134,21 @@ class TestVdscDataProxy:
         dataproxy.send_notification(mock_notification)
 
         mock_event_producer.send_notification.assert_called_once_with(mock_notification)
+
+    def test_create_zip_file(self, dataproxy, mock_s3):
+        """Testa criação de arquivo ZIP"""
+        dataproxy.create_zip_file("dir/path", "zip/path.zip")
+        mock_s3.create_zip_file.assert_called_once_with("dir/path", "zip/path.zip")
+
+    def test_upload_zip_file(self, dataproxy, mock_s3):
+        """Testa upload de arquivo ZIP"""
+        dataproxy.upload_zip_file("source/path", "target/path")
+        mock_s3.upload_file.assert_called_once_with("source/path", "target/path")
+
+    def test_delete_temp_files(self, dataproxy, mock_s3):
+        """Testa deleção de arquivos temporários"""
+        dataproxy.delete_temp_files("tmp/path")
+        mock_s3.delete_temp_files.assert_called_once_with("tmp/path")
 
 
 @pytest.mark.unit

@@ -4,36 +4,27 @@ from core.interfaces.slice.slice_dataproxy_interface import SliceDataProxyInterf
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from core.dtos.notification_dto import NotificationDto
 from aws.datasources.database.dynamodb_interface import DynamoDBInterface
-from aws.datasources.storage.s3_interface import S3Interface
+from aws.datasources.storage.storage_interface import StorageInterface
 from aws.datasources.producer.event_producer_interface import EventProducerInterface
 
-class VdscDataProxy(SliceDataProxyInterface):
+class SliceDataProxy(SliceDataProxyInterface):
 
-    def __init__(self, dynamodb: DynamoDBInterface, s3: S3Interface, event_producer: EventProducerInterface):
+    def __init__(self, dynamodb: DynamoDBInterface, storage: StorageInterface, event_producer: EventProducerInterface):
         self.dynamodb = dynamodb
-        self.s3 = s3
+        self.storage = storage
         self.event_producer = event_producer
 
-    def create_directory(self, directory_path: str) -> None:
-        self.s3.create_directory(directory_path)
+    def create_zip_file(self, directory_path: str, zip_file_path: str) -> None:
+        self.storage.create_zip_file(directory_path, zip_file_path)
 
     def delete_file(self, file_path: str) -> None:
-        self.s3.delete_file(file_path)
-
-    def delete_files_by_directory(self, directory_path: str) -> None:
-        self.s3.delete_files_by_directory(directory_path)
-
-    def get_list_paths_by_directory(self, directory_path: str) -> list[str]:
-        return self.s3.get_list_paths_by_directory(directory_path)
+        self.storage.delete_file(file_path)
 
     def open_file(self, file_path: str) -> bytes:
-        return self.s3.open_file(file_path)
-
-    def move_file(self, source_path: str, destination_path: str) -> None:
-        self.s3.move_file(source_path, destination_path)
+        return self.storage.open_file(file_path)
 
     def save_file(self, file_path: str, data: bytes) -> None:
-        self.s3.save_file(file_path, data)
+        self.storage.save_file(file_path, data)
 
     def send_schedule_retry_event(self, vdsc_metadata: VdscMetadataDTO, schedule_time: datetime, schedule_config: dict) -> None:
         self.event_producer.send_schedule_retry_event(vdsc_metadata.to_dynamodb_item(), schedule_time, schedule_config)
@@ -44,6 +35,12 @@ class VdscDataProxy(SliceDataProxyInterface):
     def update_metadata_by_video_id(self, update_data: VdscMetadataDTO) -> VdscMetadataDTO:
         """Atualiza metadados recebendo e retornando DTO"""
         return self.dynamodb.update_metadata_by_video_id(update_data)
+
+    def upload_zip_file(self, source_path: str, target_path: str) -> None:
+        self.storage.upload_file(source_path, target_path)
+
+    def delete_temp_files(self, dir_tmp:str) -> None:
+        self.storage.delete_temp_files(dir_tmp)
 
 def dict_to_dynamodb_format(data: dict) -> dict:
     dynamodb_data = {}

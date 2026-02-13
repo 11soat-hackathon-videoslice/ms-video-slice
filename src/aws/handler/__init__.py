@@ -1,5 +1,5 @@
-from .vdsc_exception_handler import VdscExceptionHandler
+from . import vdsc_exception_handler
 
-__all__ = [
-    'VdscExceptionHandler',
-]
+from .vdsc_exception_handler import (VdscExceptionHandler, logger,)
+
+__all__ = ['VdscExceptionHandler', 'logger', 'vdsc_exception_handler']

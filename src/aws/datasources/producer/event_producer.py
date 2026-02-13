@@ -19,8 +19,8 @@ class EventProducer(EventProducerInterface):
     def config(self):
         """Lazy loading da configuração VdscConfig"""
         if self._config is None:
-            from aws.config.vdsc_config import VdscConfig
-            self._config = VdscConfig().to_dto()
+            from aws.config.slice_config import SliceVdscConfig
+            self._config = SliceVdscConfig().to_dto()
         return self._config
 
     @property

@@ -9,9 +9,7 @@ from unittest.mock import Mock, patch, MagicMock
 from src.app import _process_video_event
 
 mock_idempotent_func = MagicMock(side_effect=lambda **kwargs: lambda func: func)
-
-with patch("aws_lambda_powertools.utilities.idempotency.idempotent_function", mock_idempotent_func):
-    from src.app import lambda_handler
+from src.app import lambda_handler
 
 @pytest.fixture
 def lambda_context():

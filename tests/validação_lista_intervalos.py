@@ -1,10 +1,10 @@
 import logging
 
 from aws.datasources.database.dynamodb_repository import DynamoDBRepository
-from aws.datasources.storage.s3_repository import S3StorageRepository
+from aws.datasources.storage.storage_repository import StorageStorageRepository
 from aws.datasources.producer.event_producer import EventProducer
-from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
-from aws.config.vdsc_config import VdscConfig
+from aws.dataproxy.slice_dataproxy import SliceDataProxy
+from aws.config.slice_config import SliceVdscConfig
 from core.adapters.vdsc_gateway import VdscGateway
 
 from core.dtos import VdscMetadataDTO
@@ -16,9 +16,9 @@ from src import VdscProcessUseCase, VdscMetadata
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-config = VdscConfig()
+config = SliceVdscConfig()
 dynamodb_repository = DynamoDBRepository(config.dynamodb['table_name'], config.aws['region'])
-s3_repository = S3StorageRepository(config.s3_bucket['name'], config.aws['region'])
+s3_repository = StorageStorageRepository(config.s3_bucket['name'], config.aws['region'])
 event_producer = EventProducer()
 vdsc_handler= VdscExceptionHandler()
 
@@ -42,7 +42,7 @@ def validar_lista_intervalos():
     )
 
 
-    dataproxy = VdscDataProxy(dynamodb_repository, s3_repository, event_producer)
+    dataproxy = SliceDataProxy(dynamodb_repository, s3_repository, event_producer)
     gateway = VdscGateway(dataproxy)
     metadata = VdscMetadata(dto=dto)
     use_case = VdscProcessUseCase()

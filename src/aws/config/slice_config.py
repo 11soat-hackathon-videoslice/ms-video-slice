@@ -1,13 +1,13 @@
 import json, os
 
 from aws.datasources.database.dynamodb_repository import DynamoDBRepository
-from aws.datasources.storage.s3_repository import S3StorageRepository
+from aws.datasources.storage.storage_repository import StorageStorageRepository
 from aws.datasources.producer.event_producer import EventProducer
-from aws.dataproxy.vdsc_dataproxy import VdscDataProxy
+from aws.dataproxy.slice_dataproxy import SliceDataProxy
 from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 from core.adapters.slice.slice_controller import SliceController
-from core.dtos import VdscConfigDTO, VdscSettingsDTO, QualityDTO, ScheduleRulesDTO, S3ConfigDTO
+from core.dtos import VdscConfigDTO, VdscSettingsDTO, QualityDTO, ScheduleRulesDTO
 
 
 #Varilável de ambiente VDSC_QUALITY esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
@@ -19,12 +19,12 @@ schedule_event_rules = {
     'retry_dlq': os.getenv('SCHEDULE_EVENT_DLQ', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice-dlq')
 }
 
-class VdscConfig:
+class SliceVdscConfig:
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(VdscConfig, cls).__new__(cls)
+            cls._instance = super(SliceVdscConfig, cls).__new__(cls)
             cls._instance._initialize()
         return cls._instance
 
@@ -33,10 +33,7 @@ class VdscConfig:
             'aws_region': os.getenv('AWS_REGION', 'us-east-1')
         }
         self.s3_bucket = {
-            'bucket_name': os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos'),
-            'dir_uploads': os.getenv('S3_BUCKET_DIR_UPLOADS', 'uploads/'),
-            'dir_finished': os.getenv('S3_BUCKET_DIR_FINISHED', 'finished/'),
-            'dir_processing': os.getenv('S3_BUCKET_DIR_PROCESSING', 'processing/')
+            'bucket_name': os.getenv('S3_BUCKET_NAME', 'vdsc-prd-s3-videos')
         }
         self.eventbus = {
             'name': os.getenv('EVENT_BUS_NAME', 'vdsc-prd-event-bus')
@@ -45,11 +42,14 @@ class VdscConfig:
             'table_name': os.getenv('DYNAMODB_TABLE_NAME', 'VideoSlice')
         }
         self.vdsc = {
-            'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
-            'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
+            'dir_uploads': os.getenv('VDSC_DIR_UPLOADS', 'uploads'),
+            'dir_finished': os.getenv('VDSC_DIR_FINISHED', 'finished'),
+            'dir_tmp': os.getenv('VDSC_DIR_TMP', '/tmp'),
             'max_workers': int(os.getenv('VDSC_MAX_WORKERS', '10')),
             'quality':quality,
-            'schedule_event_rules': schedule_event_rules
+            'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
+            'schedule_event_rules': schedule_event_rules,
+            'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
         }
 
     def to_dto(self) -> VdscConfigDTO:
@@ -60,31 +60,29 @@ class VdscConfig:
             aws_region=self.aws['aws_region'],
             event_bus_name=self.eventbus['name'],
             dynamodb_table_name=self.dynamodb['table_name'],
-            s3_bucket=S3ConfigDTO(
-                bucket_name=self.s3_bucket['bucket_name'],
-                dir_uploads=self.s3_bucket['dir_uploads'],
-                dir_finished=self.s3_bucket['dir_finished'],
-                dir_processing=self.s3_bucket['dir_processing']
-            ),
+            s3_bucket_name= self.s3_bucket['bucket_name'],
             vdsc=VdscSettingsDTO(
-                png_compression_level=self.vdsc['png_compression_level'],
-                zip_compression_level=self.vdsc['zip_compression_level'],
+                dir_uploads=self.vdsc['dir_uploads'],
+                dir_finished=self.vdsc['dir_finished'],
+                dir_tmp=self.vdsc['dir_tmp'],
                 max_workers=self.vdsc['max_workers'],
+                png_compression_level=self.vdsc['png_compression_level'],
                 quality=quality_obj,
-                schedule_event_rules=schedule_obj
+                schedule_event_rules=schedule_obj,
+                zip_compression_level=self.vdsc['zip_compression_level']
             )
         )
 
 # Configurações e repositórios
-config = VdscConfig().to_dto()
+config = SliceVdscConfig().to_dto()
 
 dynamodb_repository = DynamoDBRepository(config.dynamodb_table_name, config.aws_region)
-s3_repository = S3StorageRepository(config.s3_bucket.bucket_name, config.aws_region)
+s3_repository = StorageStorageRepository(config.s3_bucket_name, config.aws_region)
 event_producer = EventProducer()
 vdsc_handler = VdscExceptionHandler()
 
 
 # DataProxy e Controller globais (garante passagem pela camada Controller)
-dataproxy = VdscDataProxy(dynamodb=dynamodb_repository, s3=s3_repository, event_producer=event_producer)
+dataproxy = SliceDataProxy(dynamodb=dynamodb_repository, storage=s3_repository, event_producer=event_producer)
 controller = SliceController(dataproxy=dataproxy, handler=vdsc_handler)
 

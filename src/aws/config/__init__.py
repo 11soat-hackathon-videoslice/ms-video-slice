@@ -1,3 +1,9 @@
-from .vdsc_config import VdscConfig, controller, config
+from . import slice_config
 
-__all__ = ['VdscConfig', 'controller', 'config']
+from .slice_config import (SliceVdscConfig, config, controller, dataproxy,
+                           dynamodb_repository, event_producer, quality,
+                           s3_repository, schedule_event_rules, vdsc_handler, )
+
+__all__ = ['SliceVdscConfig', 'config', 'controller', 'dataproxy',
+           'dynamodb_repository', 'event_producer', 'quality', 's3_repository',
+           'schedule_event_rules', 'slice_config.py', 'vdsc_handler']

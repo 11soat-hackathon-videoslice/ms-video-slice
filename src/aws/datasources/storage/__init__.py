@@ -1,4 +1,8 @@
-from .s3_interface import S3Interface
-from .s3_repository import S3StorageRepository
+from . import storage_interface
+from . import storage_repository
 
-__all__ = ['S3Interface', 'S3StorageRepository']
+from .storage_interface import (StorageInterface,)
+from .storage_repository import (StorageStorageRepository, logger,)
+
+__all__ = ['StorageInterface', 'StorageStorageRepository', 'logger',
+           'storage_interface', 'storage_repository']

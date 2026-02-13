@@ -1,6 +1,6 @@
 """Script de teste rápido para validar a correção do send_notification"""
 from unittest.mock import Mock
-from src.aws.dataproxy.vdsc_dataproxy import VdscDataProxy
+from src.aws.dataproxy.slice_dataproxy import SliceDataProxy
 from core.dtos.notification_dto import NotificationDto
 
 # Criar mocks
@@ -9,9 +9,9 @@ mock_s3 = Mock()
 mock_event_producer = Mock()
 
 # Criar dataproxy
-dataproxy = VdscDataProxy(
+dataproxy = SliceDataProxy(
     dynamodb=mock_dynamodb,
-    s3=mock_s3,
+    storage=mock_s3,
     event_producer=mock_event_producer
 )
 

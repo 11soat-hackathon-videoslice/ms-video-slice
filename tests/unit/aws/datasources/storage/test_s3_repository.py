@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from botocore.exceptions import ClientError
-from src.aws.datasources.storage.s3_repository import S3StorageRepository
+from src.aws.datasources.storage.storage_repository import StorageStorageRepository
 
 
 @pytest.mark.unit
@@ -27,7 +27,7 @@ class TestS3StorageRepository:
         """Fixture para criar instância do repositório"""
         with patch('boto3.client', return_value=mock_s3_client), \
              patch('boto3.resource', return_value=mock_s3_resource):
-            repo = S3StorageRepository(bucket_name="test-bucket", region="us-east-1")
+            repo = StorageStorageRepository(bucket_name="test-bucket", region="us-east-1")
             repo.s3_client = mock_s3_client
             repo.s3_resource = mock_s3_resource.Bucket("test-bucket")
             return repo
@@ -36,7 +36,7 @@ class TestS3StorageRepository:
         """Testa inicialização do repositório"""
         with patch('boto3.client') as mock_client, \
              patch('boto3.resource') as mock_resource:
-            repo = S3StorageRepository(bucket_name="test-bucket", region="us-west-2")
+            repo = StorageStorageRepository(bucket_name="test-bucket", region="us-west-2")
             assert repo.bucket_name == "test-bucket"
             assert repo.region == "us-west-2"
             # Os clientes não são criados durante init com lazy loading
@@ -47,26 +47,6 @@ class TestS3StorageRepository:
             _ = repo.s3_resource
             mock_client.assert_called_once_with('s3', region_name='us-west-2')
             mock_resource.assert_called_once_with('s3', region_name='us-west-2')
-
-    def test_create_directory_adds_trailing_slash(self, repository, mock_s3_client):
-        """Testa criação de diretório adicionando barra final"""
-        repository.create_directory("test/path")
-        mock_s3_client.put_object.assert_called_once()
-        call_args = mock_s3_client.put_object.call_args
-        assert call_args[1]['Key'] == "test/path/"
-
-    def test_create_directory_with_trailing_slash(self, repository, mock_s3_client):
-        """Testa criação de diretório que já tem barra final"""
-        repository.create_directory("test/path/")
-        mock_s3_client.put_object.assert_called_once()
-        call_args = mock_s3_client.put_object.call_args
-        assert call_args[1]['Key'] == "test/path/"
-
-    def test_create_directory_error(self, repository, mock_s3_client):
-        """Testa erro ao criar diretório"""
-        mock_s3_client.put_object.side_effect = Exception("S3 error")
-        with pytest.raises(Exception):
-            repository.create_directory("test/path/")
 
     def test_delete_file(self, repository, mock_s3_client):
         """Testa deleção de arquivo"""
@@ -81,59 +61,6 @@ class TestS3StorageRepository:
         mock_s3_client.delete_object.side_effect = Exception("S3 error")
         with pytest.raises(Exception):
             repository.delete_file("test/file.txt")
-
-    def test_delete_files_by_directory(self, repository):
-        """Testa deleção de arquivos por diretório"""
-        mock_collection = Mock()
-        mock_collection.delete.return_value = None
-
-        with patch.object(repository, '_get_list_files_in_directory', return_value=mock_collection):
-            repository.delete_files_by_directory("test/dir/")
-            mock_collection.delete.assert_called_once()
-
-    def test_get_list_paths_by_directory(self, repository):
-        """Testa obtenção de lista de caminhos"""
-        mock_obj1 = Mock()
-        mock_obj1.key = "test/file1.txt"
-        mock_obj2 = Mock()
-        mock_obj2.key = "test/file2.txt"
-        mock_obj3 = Mock()
-        mock_obj3.key = "test/subdir/"
-
-        mock_collection = [mock_obj1, mock_obj2, mock_obj3]
-
-        with patch.object(repository, '_get_list_files_in_directory', return_value=mock_collection):
-            result = repository.get_list_paths_by_directory("test/")
-            assert len(result) == 2
-            assert "test/file1.txt" in result
-            assert "test/file2.txt" in result
-            assert "test/subdir/" not in result
-
-    def test_move_file(self, repository, mock_s3_client):
-        """Testa movimentação de arquivo"""
-        with patch.object(repository, '_check_file_location', side_effect=[True, False]):
-            repository.move_file("source.txt", "destination.txt")
-
-            assert mock_s3_client.copy_object.called
-            assert mock_s3_client.delete_object.called
-
-            copy_call_args = mock_s3_client.copy_object.call_args
-            assert copy_call_args[1]['Key'] == "destination.txt"
-
-    def test_move_file_skip_when_source_not_found_and_destination_exists(self, repository, mock_s3_client):
-        """Testa que não move quando source não existe e destination existe"""
-        with patch.object(repository, '_check_file_location', side_effect=[False, True]):
-            repository.move_file("source.txt", "destination.txt")
-
-            assert not mock_s3_client.copy_object.called
-            assert not mock_s3_client.delete_object.called
-
-    def test_move_file_error(self, repository, mock_s3_client):
-        """Testa erro ao mover arquivo"""
-        with patch.object(repository, '_check_file_location', side_effect=[True, False]):
-            mock_s3_client.copy_object.side_effect = Exception("S3 error")
-            with pytest.raises(Exception):
-                repository.move_file("source.txt", "destination.txt")
 
     def test_open_file(self, repository, mock_s3_client):
         """Testa abertura de arquivo"""
@@ -159,45 +86,61 @@ class TestS3StorageRepository:
 
     def test_save_file(self, repository, mock_s3_client):
         """Testa salvamento de arquivo"""
-        repository.save_file("test/file.txt", b"content")
-
-        mock_s3_client.put_object.assert_called_once_with(
-            Bucket="test-bucket",
-            Key="test/file.txt",
-            Body=b"content"
-        )
+        with patch('pathlib.Path') as mock_path:
+            mock_file = Mock()
+            mock_path.return_value = mock_file
+            repository.save_file(file_path="test/file.txt", data=b"content")
+            mock_path.assert_called_once_with("test/file.txt")
+            mock_file.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+            mock_file.write_bytes.assert_called_once_with(b"content")
 
     def test_save_file_error(self, repository, mock_s3_client):
         """Testa erro ao salvar arquivo"""
-        mock_s3_client.put_object.side_effect = Exception("S3 error")
-        with pytest.raises(Exception):
-            repository.save_file("test/file.txt", b"content")
+        with patch('pathlib.Path') as mock_path:
+            mock_file = Mock()
+            mock_path.return_value = mock_file
+            mock_file.write_bytes.side_effect = Exception("File error")
+            with pytest.raises(Exception):
+                repository.save_file(file_path="test/file.txt", data=b"content")
 
-    def test_check_file_location_exists(self, repository, mock_s3_client):
-        """Testa verificação de localização de arquivo quando existe"""
-        result = repository._check_file_location("test/file.txt")
-        assert result == True
-        mock_s3_client.head_object.assert_called_once_with(
-            Bucket="test-bucket",
-            Key="test/file.txt"
-        )
+    def test_delete_temp_files(self, repository):
+        """Testa deleção de arquivos temporários"""
+        with patch('shutil.rmtree') as mock_rmtree:
+            repository.delete_temp_files("tmp/path")
+            mock_rmtree.assert_called_once_with("tmp/path")
 
-    def test_check_file_location_not_found(self, repository, mock_s3_client):
-        """Testa verificação de localização de arquivo quando não encontrado"""
-        error = ClientError(
-            error_response={'Error': {'Code': '404'}},
-            operation_name='HeadObject'
-        )
-        mock_s3_client.head_object.side_effect = error
-        result = repository._check_file_location("test/file.txt")
-        assert result == False
+    def test_delete_temp_files_error(self, repository):
+        """Testa erro ao deletar arquivos temporários"""
+        with patch('shutil.rmtree') as mock_rmtree:
+            mock_rmtree.side_effect = Exception("rmtree error")
+            with pytest.raises(Exception):
+                repository.delete_temp_files("tmp/path")
 
-    def test_check_file_location_other_error(self, repository, mock_s3_client):
-        """Testa verificação de localização de arquivo com outro erro"""
-        error = ClientError(
-            error_response={'Error': {'Code': '500'}},
-            operation_name='HeadObject'
-        )
-        mock_s3_client.head_object.side_effect = error
-        result = repository._check_file_location("test/file.txt")
-        assert result == False
+    def test_create_zip_file(self, repository):
+        """Testa criação de arquivo ZIP"""
+        with patch('pathlib.Path') as mock_path, \
+             patch('zipfile.ZipFile') as mock_zipfile:
+            mock_dir = Mock()
+            mock_file1 = Mock()
+            mock_file1.is_file.return_value = True
+            mock_file1.name = "file1.txt"
+            mock_dir.iterdir.return_value = [mock_file1]
+            mock_path.side_effect = [mock_dir, Mock()]  # First for dir_path, second for zip_path
+            mock_zip = Mock()
+            mock_zipfile.return_value.__enter__.return_value = mock_zip
+            repository.create_zip_file("dir/path", "zip/path.zip")
+            mock_path.assert_any_call("dir/path")
+            mock_path.assert_any_call("zip/path.zip")
+            mock_zipfile.assert_called_once()
+            mock_zip.write.assert_called_once_with(mock_file1, arcname="file1.txt")
+
+    def test_upload_file(self, repository, mock_s3_client):
+        """Testa upload de arquivo"""
+        repository.upload_file("source/path", "target/path")
+        mock_s3_client.upload_file.assert_called_once_with("source/path", "test-bucket", "target/path")
+
+    def test_upload_file_error(self, repository, mock_s3_client):
+        """Testa erro ao fazer upload de arquivo"""
+        mock_s3_client.upload_file.side_effect = ClientError({}, "UploadFailed")
+        with pytest.raises(ClientError):
+            repository.upload_file("source/path", "target/path")

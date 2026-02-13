@@ -13,7 +13,7 @@ sys.path.insert(0, str(core_src_path))
 
 from core.utils import get_event_schedule_timestamp
 from core.dtos import VdscMetadataDTO
-from aws.config import VdscConfig
+from aws.config import SliceVdscConfig
 from aws.datasources.producer import EventProducer
 
 
@@ -23,7 +23,7 @@ from aws.datasources.producer import EventProducer
 def schueduler_manual():
     # Caminho do arquivo JSON com o evento do DynamoDB
     json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'dynamodb_item_example.json')
-    config = VdscConfig()
+    config = SliceVdscConfig()
     # Ler o conteúdo do arquivo JSON
     print(f"Carregando evento do arquivo: {json_file_path}")
     with open(json_file_path, 'r', encoding='utf-8') as file:
