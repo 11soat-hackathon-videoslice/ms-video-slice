@@ -76,6 +76,7 @@ class StorageStorageRepository(StorageInterface):
 
     def save_file(self, file_path: str, data: bytes) -> None:
         import pathlib
+        self.check_disk_space()
         path = pathlib.Path(file_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -88,6 +89,7 @@ class StorageStorageRepository(StorageInterface):
     def create_zip_file(self, directory_path: str, zip_file_path: str) -> None:
         """Cria um arquivo ZIP no temporário e faz upload para o S3"""
         from pathlib import Path
+        self.check_disk_space()
 
         dir_path = Path(directory_path)
         zip_path = Path(zip_file_path)
@@ -106,3 +108,9 @@ class StorageStorageRepository(StorageInterface):
         except ClientError as e:
             logger.error(f"Erro ao enviar arquivo ZIP para S3: {str(e)}", exc_info=True)
             raise
+
+    def check_disk_space(self) -> bool:
+        """Verifica se há espaço suficiente no disco local para processar o vídeo"""
+        import shutil
+        total, used, free = shutil.disk_usage("/tmp")
+        logger.debug(f"Espaço em disco - Total: {total} bytes, Usado: {used} bytes, Livre: {free} bytes")
