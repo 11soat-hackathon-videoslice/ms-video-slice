@@ -1,10 +1,8 @@
 import logging
-import zipfile
-
 import boto3
-from botocore.exceptions import ClientError
-
+import zipstream
 from .storage_interface import StorageInterface
+from .storage_zipstream import StorageZipStreamReader
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +74,7 @@ class StorageStorageRepository(StorageInterface):
 
     def save_file(self, file_path: str, data: bytes) -> None:
         import pathlib
-        self.check_disk_space()
+        self._check_disk_space()
         path = pathlib.Path(file_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -86,31 +84,47 @@ class StorageStorageRepository(StorageInterface):
             logger.error(f"Erro ao salvar arquivo localmente {file_path}: {str(e)}", exc_info=True)
             raise
 
-    def create_zip_file(self, directory_path: str, zip_file_path: str) -> None:
-        """Cria um arquivo ZIP no temporário e faz upload para o S3"""
-        from pathlib import Path
-        self.check_disk_space()
-
-        dir_path = Path(directory_path)
-        zip_path = Path(zip_file_path)
-
-        with zipfile.ZipFile(zip_path, 'w', allowZip64=True) as zip_file:
-            for file in dir_path.iterdir():
-                if file.is_file():
-                    # O zipfile aceita objetos Path diretamente
-                    zip_file.write(file, arcname=file.name)
-        logger.info(f"Arquivo ZIP criado com sucesso: {zip_path}")
-
-    def upload_file(self, source_path: str, target_path: str) -> None:
+    def upload_finished_zip(self, output_directory: str, target_path: str) -> None:
+        zip_stream = self._create_zipstream(output_directory)
         try:
-            self.s3_client.upload_file(source_path, self.bucket_name, target_path)
-            logger.info(f"Arquivo ZIP enviado para S3 com sucesso: s3://{self.bucket_name}/{target_path}")
-        except ClientError as e:
-            logger.error(f"Erro ao enviar arquivo ZIP para S3: {str(e)}", exc_info=True)
+            self.s3_client.upload_fileobj(
+                Fileobj=StorageZipStreamReader(zip_stream),
+                Bucket=self.bucket_name,
+                Key=target_path
+            )
+            logger.info(f"Arquivo enviado para S3 com sucesso: s3://{self.bucket_name}/{target_path}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar arquivo para S3 {target_path}: {str(e)}", exc_info=True)
             raise
 
-    def check_disk_space(self) -> bool:
+    def _create_zipstream(self, output_directory: str) -> zipstream.ZipStream:
+        """Cria zipStream a partir dos arquivos num diretório local para upload dinamico"""
+        from pathlib import Path
+
+        dir_path = Path(output_directory)
+        logger.debug(f"Diretório dos arquivos: {dir_path}")
+        zs = zipstream.ZipStream()
+        zs.allowZip64 = True
+        try:
+            for file in dir_path.iterdir():
+                if file.is_file():
+                    zs.add_path(file, arcname=file.name)
+            return zs
+        except Exception as e:
+            logger.error(f"Erro ao criar zipStream do diretório {output_directory}: {str(e)}", exc_info=True)
+            raise
+
+    #### debugging methods ####
+    def _check_disk_space(self) -> bool:
         """Verifica se há espaço suficiente no disco local para processar o vídeo"""
         import shutil
         total, used, free = shutil.disk_usage("/tmp")
         logger.debug(f"Espaço em disco - Total: {total} bytes, Usado: {used} bytes, Livre: {free} bytes")
+
+    def _get_dir_size(self, path: str):
+        total = 0
+        with os.scandir(path) as it:
+            for entry in it:
+                if entry.is_file():
+                    total += entry.stat().st_size
+        logger.debug(f"Tamanho do diretório: {total} em bytes")

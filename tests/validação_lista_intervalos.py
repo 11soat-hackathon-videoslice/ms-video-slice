@@ -26,7 +26,7 @@ def validar_lista_intervalos():
     dto = VdscMetadataDTO(
         video_id="video123",
         file_name="test_video.mp4",
-        extension_file="mp4",
+        file_extension="mp4",
         status="UPLOADED",
         created="2026-01-13T00:00:00Z",
         user_id="user123",
@@ -34,10 +34,11 @@ def validar_lista_intervalos():
         unit_time="ms",
         start_time=500,
         end_time=10000,
-        time_interval=[500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000],
-        max_retry=3,
+        interval_time=[500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000],
+        max_retries=3,
         retries=0,
-        quality="high",
+        resize="high",
+        quality_output_level=70,
         logs=[]
     )
 

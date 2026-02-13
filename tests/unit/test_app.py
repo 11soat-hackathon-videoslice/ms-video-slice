@@ -69,7 +69,7 @@ class TestLambdaHandler:
                                     "userId": {
                                         "S": "848834a8-20e1-7004-ee3b-4ba1495239d8"
                                     },
-                                    "quality": {
+                                    "resize": {
                                         "S": "medium"
                                     },
                                     "maxRetry": {
@@ -183,7 +183,7 @@ class TestLambdaHandler:
             'timeInterval': {'L': [{'S': '00:00:00'}]},
             'maxRetry': {'N': '3'},
             'retries': {'N': '0'},
-            'quality': {'S': 'high'},
+            'resize': {'S': 'high'},
             'logs': {'L': []}
         }
 

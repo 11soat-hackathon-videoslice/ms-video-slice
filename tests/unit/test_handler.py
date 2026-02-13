@@ -43,7 +43,7 @@ class TestVdscProcessHandler:
                                     'totalTime': {'N': '4'},
                                     'videoId': {'S': 'ml9jexx5TWrC'},
                                     'userId': {'S': '848834a8-20e1-7004-ee3b-4ba1495239d8'},
-                                    'quality': {'S': 'medium'},
+                                    'resize': {'S': 'medium'},
                                     'maxRetry': {'N': '3'},
                                     'retries': {'N': '0'},
                                     'extensionFile': {'S': 'mp4'},

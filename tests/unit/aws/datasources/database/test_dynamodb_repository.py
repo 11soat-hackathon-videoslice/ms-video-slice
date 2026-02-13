@@ -51,7 +51,7 @@ class TestDynamoDBRepository:
                 'timeInterval': {'L': [{'S': '00:00:00'}]},
                 'maxRetry': {'N': '3'},
                 'retries': {'N': '0'},
-                'quality': {'S': 'high'},
+                'resize': {'S': 'high'},
                 'logs': {'L': []}
             }
         }
@@ -173,7 +173,7 @@ class TestDynamoDBRepository:
             'timeInterval': {'L': [{'S': '00:00:00'}, {'S': '00:02:00'}]},
             'maxRetry': {'N': '5'},
             'retries': {'N': '1'},
-            'quality': {'S': 'ultra'},
+            'resize': {'S': 'ultra'},
             'logs': {'L': []}
         }
 
@@ -199,10 +199,11 @@ class TestDynamoDBRepository:
             unit_time='s',
             start_time=0,
             end_time=30,
-            time_interval=['00:00:00', '00:00:30'],
-            max_retry=3,
+            interval_time=['00:00:00', '00:00:30'],
+            max_retries=3,
             retries=1,
-            quality='high',
+            resize='high',
+            quality_output_level=75,
             logs=[LogEntryDTO(timestamp='2026-01-27T14:00:00Z', info='Processing')]
         )
 
@@ -221,7 +222,7 @@ class TestDynamoDBRepository:
                 'timeInterval': {'L': [{'S': '00:00:00'}, {'S': '00:00:30'}]},
                 'maxRetry': {'N': '3'},
                 'retries': {'N': '1'},
-                'quality': {'S': 'high'},
+                'resize': {'S': 'high'},
                 'logs': {'L': [
                     {'M': {
                         'timestamp': {'S': '2026-01-27T14:00:00Z'},
@@ -245,7 +246,7 @@ class TestDynamoDBRepository:
         fields = {
             'status': {'S': 'FINISHED'},
             'retries': {'N': '2'},
-            'quality': {'S': 'ultra'},
+            'resize': {'S': 'ultra'},
             'logs': {'L': []}
         }
 
@@ -263,7 +264,7 @@ class TestDynamoDBRepository:
         dto = VdscMetadataDTO(
             video_id='video_error',
             file_name='error_test.mp4',
-            extension_file='mp4',
+            file_extension='mp4',
             status='FAILED',
             created='2026-01-27T15:00:00Z',
             user_id='user_error',
@@ -271,10 +272,11 @@ class TestDynamoDBRepository:
             unit_time='s',
             start_time=0,
             end_time=10,
-            time_interval=['00:00:00'],
-            max_retry=3,
+            interval_time=['00:00:00'],
+            max_retries=3,
             retries=3,
-            quality='low',
+            resize='low',
+            quality_output_level=30,
             logs=[]
         )
 
@@ -300,7 +302,7 @@ class TestDynamoDBRepository:
                 'timeInterval': {'L': [{'S': '00:00:00'}]},
                 'maxRetry': {'N': '3'},
                 'retries': {'N': '0'},
-                'quality': {'S': 'medium'},
+                'resize': {'S': 'medium'},
                 'logs': {'L': []}
             }
         }

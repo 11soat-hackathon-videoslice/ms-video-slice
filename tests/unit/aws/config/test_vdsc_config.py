@@ -41,12 +41,10 @@ class TestVdscConfig:
     def test_default_vdsc_config(self):
         """Testa configurações padrão de processamento de vídeo"""
         config = SliceVdscConfig()
-        assert config.vdsc['png_compression_level'] == 9
-        assert config.vdsc['zip_compression_level'] == 5
-        assert config.vdsc['quality']['ultra'] == 1080
-        assert config.vdsc['quality']['high'] == 720
-        assert config.vdsc['quality']['medium'] == 480
-        assert config.vdsc['quality']['low'] == 360
+        assert config.vdsc['resize']['ultra'] == 1080
+        assert config.vdsc['resize']['high'] == 720
+        assert config.vdsc['resize']['medium'] == 480
+        assert config.vdsc['resize']['low'] == 360
 
     @patch.dict(os.environ, {
         'AWS_REGION': 'us-west-2',

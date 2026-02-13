@@ -12,8 +12,6 @@ os.environ.setdefault('S3_BUCKET_NAME', 'test-bucket')
 os.environ.setdefault('DYNAMODB_TABLE_NAME', 'TestVideoSlice')
 os.environ.setdefault('SQS_URL', 'https://sqs.us-east-1.amazonaws.com/test')
 os.environ.setdefault('EVENT_BUS_NAME', 'test-event-bus')
-os.environ.setdefault('PNG_COMPRESSION_LEVEL', '9')
-os.environ.setdefault('ZIP_COMPRESSION_LEVEL', '5')
 
 # Mock do decorador idempotent antes de qualquer import do app
 def mock_idempotent_decorator(config=None, persistence_layer=None, **kwargs):
@@ -22,13 +20,7 @@ def mock_idempotent_decorator(config=None, persistence_layer=None, **kwargs):
         return func
     return decorator
 
-# Mock das classes de configuração de idempotência
-mock_idempotency_module = MagicMock()
-mock_idempotency_module.idempotent = mock_idempotent_decorator
-mock_idempotency_module.IdempotencyConfig = MagicMock
-mock_idempotency_module.DynamoDBPersistenceLayer = MagicMock
 
-sys.modules['aws_lambda_powertools.utilities.idempotency'] = mock_idempotency_module
 
 # Adiciona o diretório src ao path
 src_path = Path(__file__).parent.parent / "src"
@@ -50,5 +42,4 @@ def mock_aws_env(monkeypatch):
     monkeypatch.setenv("DYNAMODB_TABLE_NAME", "TestVideoSlice")
     monkeypatch.setenv("SQS_URL", "https://sqs.us-east-1.amazonaws.com/test")
     monkeypatch.setenv("EVENT_BUS_NAME", "test-event-bus")
-    monkeypatch.setenv("PNG_COMPRESSION_LEVEL", "9")
     monkeypatch.setenv("ZIP_COMPRESSION_LEVEL", "5")

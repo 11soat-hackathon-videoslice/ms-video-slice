@@ -7,11 +7,11 @@ from aws.dataproxy.slice_dataproxy import SliceDataProxy
 from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 from core.adapters.slice.slice_controller import SliceController
-from core.dtos import VdscConfigDTO, VdscSettingsDTO, QualityDTO, ScheduleRulesDTO
+from core.dtos import VdscConfigDTO, VdscSettingsDTO, ResizeDTO, ScheduleRulesDTO
 
 
-#Varilável de ambiente VDSC_QUALITY esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
-quality = json.loads(os.getenv('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
+#Varilável de ambiente VDSC_RESIZE esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
+resize = json.loads(os.getenv('VDSC_RESIZE', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
 schedule_event_rules = {
     'retry_backoff_factor':  int(os.getenv('SCHEDULE_EVENT_RETRY_BACKOFF_FACTOR', '5')),
     'retry_arn': os.getenv('SCHEDULE_EVENT_ROLE_ARN', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice'),
@@ -28,7 +28,7 @@ class SliceVdscConfig:
             cls._instance._initialize()
         return cls._instance
 
-    def _initialize(self, quality = quality, schedule_event_rules = schedule_event_rules):
+    def _initialize(self, resize = resize, schedule_event_rules = schedule_event_rules):
         self.aws = {
             'aws_region': os.getenv('AWS_REGION', 'us-east-1')
         }
@@ -46,14 +46,12 @@ class SliceVdscConfig:
             'dir_finished': os.getenv('VDSC_DIR_FINISHED', 'finished'),
             'dir_tmp': os.getenv('VDSC_DIR_TMP', '/tmp'),
             'max_workers': int(os.getenv('VDSC_MAX_WORKERS', '10')),
-            'quality':quality,
-            'png_compression_level': int(os.getenv('VDSC_PNG_COMPRESSION_LEVEL', '9')),
+            'resize':resize,
             'schedule_event_rules': schedule_event_rules,
-            'zip_compression_level': int(os.getenv('VDSC_ZIP_COMPRESSION_LEVEL', '5')),
         }
 
     def to_dto(self) -> VdscConfigDTO:
-        quality_obj = QualityDTO(**self.vdsc['quality'])
+        resize_obj = ResizeDTO(**self.vdsc['resize'])
         schedule_obj = ScheduleRulesDTO(**self.vdsc['schedule_event_rules'])
 
         return VdscConfigDTO(
@@ -66,10 +64,8 @@ class SliceVdscConfig:
                 dir_finished=self.vdsc['dir_finished'],
                 dir_tmp=self.vdsc['dir_tmp'],
                 max_workers=self.vdsc['max_workers'],
-                png_compression_level=self.vdsc['png_compression_level'],
-                quality=quality_obj,
+                resize=resize_obj,
                 schedule_event_rules=schedule_obj,
-                zip_compression_level=self.vdsc['zip_compression_level']
             )
         )
 
@@ -85,4 +81,3 @@ vdsc_handler = VdscExceptionHandler()
 # DataProxy e Controller globais (garante passagem pela camada Controller)
 dataproxy = SliceDataProxy(dynamodb=dynamodb_repository, storage=s3_repository, event_producer=event_producer)
 controller = SliceController(dataproxy=dataproxy, handler=vdsc_handler)
-

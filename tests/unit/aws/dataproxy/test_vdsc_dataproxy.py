@@ -130,20 +130,13 @@ class TestVdscDataProxy:
     def test_send_notification_delegates_to_event_producer(self, dataproxy, mock_event_producer):
         """Testa que send_notification delega corretamente para event_producer"""
         mock_notification = Mock(spec=NotificationDto)
-
         dataproxy.send_notification(mock_notification)
-
         mock_event_producer.send_notification.assert_called_once_with(mock_notification)
 
-    def test_create_zip_file(self, dataproxy, mock_s3):
-        """Testa criação de arquivo ZIP"""
-        dataproxy.create_zip_file("dir/path", "zip/path.zip")
-        mock_s3.create_zip_file.assert_called_once_with("dir/path", "zip/path.zip")
-
-    def test_upload_zip_file(self, dataproxy, mock_s3):
-        """Testa upload de arquivo ZIP"""
-        dataproxy.upload_zip_file("source/path", "target/path")
-        mock_s3.upload_file.assert_called_once_with("source/path", "target/path")
+    def test_upload_finished_zip(self, dataproxy, mock_s3):
+        """Testa upload de zip finalizado"""
+        dataproxy.upload_finished_zip("output/dir", "target/path.zip")
+        mock_s3.upload_finished_zip.assert_called_once_with("output/dir", "target/path.zip")
 
     def test_delete_temp_files(self, dataproxy, mock_s3):
         """Testa deleção de arquivos temporários"""

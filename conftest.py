@@ -11,6 +11,4 @@ def pytest_configure(config):
     os.environ.setdefault('DYNAMODB_TABLE_NAME', 'TestVideoSlice')
     os.environ.setdefault('SQS_URL', 'https://sqs.us-east-1.amazonaws.com/test')
     os.environ.setdefault('EVENT_BUS_NAME', 'test-event-bus')
-    os.environ.setdefault('PNG_COMPRESSION_LEVEL', '9')
-    os.environ.setdefault('ZIP_COMPRESSION_LEVEL', '5')
-    os.environ.setdefault('VDSC_QUALITY', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}')
+    os.environ.setdefault('VDSC_RESIZE', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}')

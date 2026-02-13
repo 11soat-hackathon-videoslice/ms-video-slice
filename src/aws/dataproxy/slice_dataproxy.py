@@ -14,9 +14,6 @@ class SliceDataProxy(SliceDataProxyInterface):
         self.storage = storage
         self.event_producer = event_producer
 
-    def create_zip_file(self, directory_path: str, zip_file_path: str) -> None:
-        self.storage.create_zip_file(directory_path, zip_file_path)
-
     def delete_file(self, file_path: str) -> None:
         self.storage.delete_file(file_path)
 
@@ -32,12 +29,12 @@ class SliceDataProxy(SliceDataProxyInterface):
     def send_notification(self, notification: NotificationDto) -> None:
         self.event_producer.send_notification(notification)
 
+    def upload_finished_zip(self, output_directory: str, target_path: str) -> None:
+        self.storage.upload_finished_zip(output_directory, target_path)
+
     def update_metadata_by_video_id(self, update_data: VdscMetadataDTO) -> VdscMetadataDTO:
         """Atualiza metadados recebendo e retornando DTO"""
         return self.dynamodb.update_metadata_by_video_id(update_data)
-
-    def upload_zip_file(self, source_path: str, target_path: str) -> None:
-        self.storage.upload_file(source_path, target_path)
 
     def delete_temp_files(self, dir_tmp:str) -> None:
         self.storage.delete_temp_files(dir_tmp)

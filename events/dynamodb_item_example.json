@@ -14,19 +14,22 @@
   "userId": {
     "S": "848834a8-20e1-7004-ee3b-4ba1495239d8"
   },
-  "quality": {
+  "resize": {
     "S": "medium"
   },
-  "maxRetry": {
+  "maxRetries": {
     "N": "3"
   },
   "retries": {
     "N": "0"
   },
-  "extensionFile": {
+  "fileExtension": {
     "S": "mp4"
   },
-  "timeInterval": {
+  "qualityOutputLevel": {
+    "N": 100
+  },
+  "intervalTime": {
     "L": [
       {
         "S": "2"

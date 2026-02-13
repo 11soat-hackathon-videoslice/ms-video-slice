@@ -116,31 +116,44 @@ class TestS3StorageRepository:
             with pytest.raises(Exception):
                 repository.delete_temp_files("tmp/path")
 
-    def test_create_zip_file(self, repository):
-        """Testa criação de arquivo ZIP"""
+    def test_create_zipstream(self, repository):
+        """Testa criação de zipstream"""
         with patch('pathlib.Path') as mock_path, \
-             patch('zipfile.ZipFile') as mock_zipfile:
+             patch('zipstream.ZipStream') as mock_zipstream:
             mock_dir = Mock()
             mock_file1 = Mock()
             mock_file1.is_file.return_value = True
             mock_file1.name = "file1.txt"
             mock_dir.iterdir.return_value = [mock_file1]
-            mock_path.side_effect = [mock_dir, Mock()]  # First for dir_path, second for zip_path
-            mock_zip = Mock()
-            mock_zipfile.return_value.__enter__.return_value = mock_zip
-            repository.create_zip_file("dir/path", "zip/path.zip")
-            mock_path.assert_any_call("dir/path")
-            mock_path.assert_any_call("zip/path.zip")
-            mock_zipfile.assert_called_once()
-            mock_zip.write.assert_called_once_with(mock_file1, arcname="file1.txt")
+            mock_path.return_value = mock_dir
+            mock_zs = Mock()
+            mock_zipstream.return_value = mock_zs
+            result = repository._create_zipstream("dir/path")
+            mock_path.assert_called_once_with("dir/path")
+            mock_zipstream.assert_called_once()
+            mock_zs.add_path.assert_called_once_with(mock_file1, arcname="file1.txt")
+            assert result == mock_zs
 
-    def test_upload_file(self, repository, mock_s3_client):
-        """Testa upload de arquivo"""
-        repository.upload_file("source/path", "target/path")
-        mock_s3_client.upload_file.assert_called_once_with("source/path", "test-bucket", "target/path")
+    def test_upload_finished_zip(self, repository, mock_s3_client):
+        """Testa upload de zip finalizado"""
+        with patch.object(repository, '_create_zipstream') as mock_create_zipstream, \
+             patch('src.aws.datasources.storage.storage_repository.StorageZipStreamReader') as mock_reader:
+            mock_zs = Mock()
+            mock_create_zipstream.return_value = mock_zs
+            mock_reader_instance = Mock()
+            mock_reader.return_value = mock_reader_instance
+            repository.upload_finished_zip("output/dir", "target/path.zip")
+            mock_create_zipstream.assert_called_once_with("output/dir")
+            mock_reader.assert_called_once_with(mock_zs)
+            mock_s3_client.upload_fileobj.assert_called_once_with(
+                Fileobj=mock_reader_instance,
+                Bucket="test-bucket",
+                Key="target/path.zip"
+            )
 
-    def test_upload_file_error(self, repository, mock_s3_client):
-        """Testa erro ao fazer upload de arquivo"""
-        mock_s3_client.upload_file.side_effect = ClientError({}, "UploadFailed")
-        with pytest.raises(ClientError):
-            repository.upload_file("source/path", "target/path")
+    def test_upload_finished_zip_error(self, repository, mock_s3_client):
+        """Testa erro ao fazer upload de zip finalizado"""
+        with patch.object(repository, '_create_zipstream') as mock_create_zipstream:
+            mock_create_zipstream.side_effect = Exception("Zip error")
+            with pytest.raises(Exception):
+                repository.upload_finished_zip("output/dir", "target/path.zip")
