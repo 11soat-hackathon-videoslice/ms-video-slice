@@ -92,7 +92,7 @@ class StorageStorageRepository(StorageInterface):
         dir_path = Path(directory_path)
         zip_path = Path(zip_file_path)
 
-        with zipfile.ZipFile(zip_path, 'w') as zip_file:
+        with zipfile.ZipFile(zip_path, 'w', allowZip64=True) as zip_file:
             for file in dir_path.iterdir():
                 if file.is_file():
                     # O zipfile aceita objetos Path diretamente

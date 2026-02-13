@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
 
+    _clean_file_system()
+
     logger.info("=== Iniciando Lambda Handler ===")
     logger.info(f"Recebido novo evento: {json.dumps(event)}")
 
