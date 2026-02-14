@@ -72,16 +72,16 @@ class TestLambdaHandler:
                                     "resize": {
                                         "S": "medium"
                                     },
-                                    "maxRetry": {
+                                    "maxRetries": {
                                         "N": "3"
                                     },
                                     "retries": {
                                         "N": "0"
                                     },
-                                    "extensionFile": {
+                                    "fileExtension": {
                                         "S": "mp4"
                                     },
-                                    "timeInterval": {
+                                    "intervalTime": {
                                         "L": [
                                             {
                                                 "S": "1"
@@ -99,6 +99,9 @@ class TestLambdaHandler:
                                     },
                                     "unitTime": {
                                         "S": "s"
+                                    },
+                                    "qualityOutputLevel": {
+                                        "N": "50"
                                     }
                                 },
                                 "SequenceNumber": "102042700003665459637771224",
@@ -172,7 +175,7 @@ class TestLambdaHandler:
         dynamodb_payload = {
             'videoId': {'S': 'video123'},
             'fileName': {'S': 'test.mp4'},
-            'extensionFile': {'S': 'mp4'},
+            'fileExtension': {'S': 'mp4'},
             'status': {'S': 'uploaded'},
             'created': {'S': '2026-01-13T00:00:00Z'},
             'userId': {'S': 'user123'},
@@ -180,10 +183,11 @@ class TestLambdaHandler:
             'unitTime': {'S': 's'},
             'startTime': {'N': '0'},
             'endTime': {'N': '60'},
-            'timeInterval': {'L': [{'S': '00:00:00'}]},
-            'maxRetry': {'N': '3'},
+            'intervalTime': {'L': [{'S': '00:00:00'}]},
+            'maxRetries': {'N': '3'},
             'retries': {'N': '0'},
             'resize': {'S': 'high'},
+            'qualityOutputLevel': {'N': '80'},
             'logs': {'L': []}
         }
 

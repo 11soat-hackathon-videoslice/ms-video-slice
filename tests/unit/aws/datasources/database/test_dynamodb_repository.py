@@ -40,7 +40,7 @@ class TestDynamoDBRepository:
             'Item': {
                 'videoId': {'S': 'video123'},
                 'fileName': {'S': 'test.mp4'},
-                'extensionFile': {'S': 'mp4'},
+                'fileExtension': {'S': 'mp4'},
                 'status': {'S': 'uploaded'},
                 'created': {'S': '2026-01-13T00:00:00Z'},
                 'userId': {'S': 'user123'},
@@ -48,9 +48,10 @@ class TestDynamoDBRepository:
                 'unitTime': {'S': 's'},
                 'startTime': {'N': '0'},
                 'endTime': {'N': '60'},
-                'timeInterval': {'L': [{'S': '00:00:00'}]},
-                'maxRetry': {'N': '3'},
+                'intervalTime': {'L': [{'S': '00:00:00'}]},
+                'maxRetries': {'N': '3'},
                 'retries': {'N': '0'},
+                'qualityOutputLevel': {'N': 80},
                 'resize': {'S': 'high'},
                 'logs': {'L': []}
             }
@@ -162,7 +163,7 @@ class TestDynamoDBRepository:
         item = {
             'videoId': {'S': 'video456'},
             'fileName': {'S': 'convert_test.mp4'},
-            'extensionFile': {'S': 'mp4'},
+            'fileExtension': {'S': 'mp4'},
             'status': {'S': 'PROCESSING'},
             'created': {'S': '2026-01-27T12:00:00Z'},
             'userId': {'S': 'user456'},
@@ -170,8 +171,8 @@ class TestDynamoDBRepository:
             'unitTime': {'S': 's'},
             'startTime': {'N': '0'},
             'endTime': {'N': '120'},
-            'timeInterval': {'L': [{'S': '00:00:00'}, {'S': '00:02:00'}]},
-            'maxRetry': {'N': '5'},
+            'intervalTime': {'L': [{'S': '00:00:00'}, {'S': '00:02:00'}]},
+            'maxRetries': {'N': '5'},
             'retries': {'N': '1'},
             'resize': {'S': 'ultra'},
             'logs': {'L': []}
@@ -191,7 +192,7 @@ class TestDynamoDBRepository:
         dto = VdscMetadataDTO(
             video_id='video789',
             file_name='flow_test.mp4',
-            extension_file='mp4',
+            file_extension='mp4',
             status='PROCESSING',
             created='2026-01-27T14:00:00Z',
             user_id='user789',
@@ -211,7 +212,7 @@ class TestDynamoDBRepository:
             'Attributes': {
                 'videoId': {'S': 'video789'},
                 'fileName': {'S': 'flow_test.mp4'},
-                'extensionFile': {'S': 'mp4'},
+                'fileExtension': {'S': 'mp4'},
                 'status': {'S': 'PROCESSING'},
                 'created': {'S': '2026-01-27T14:00:00Z'},
                 'userId': {'S': 'user789'},
@@ -219,8 +220,9 @@ class TestDynamoDBRepository:
                 'unitTime': {'S': 's'},
                 'startTime': {'N': '0'},
                 'endTime': {'N': '30'},
-                'timeInterval': {'L': [{'S': '00:00:00'}, {'S': '00:00:30'}]},
-                'maxRetry': {'N': '3'},
+                'intervalTime': {'L': [{'S': '00:00:00'}, {'S': '00:00:30'}]},
+                'maxRetries': {'N': '3'},
+                'qualityOutputLevel': {'N': '75'},
                 'retries': {'N': '1'},
                 'resize': {'S': 'high'},
                 'logs': {'L': [
@@ -291,7 +293,7 @@ class TestDynamoDBRepository:
             'Item': {
                 'videoId': {'S': 'video_log'},
                 'fileName': {'S': 'log_test.mp4'},
-                'extensionFile': {'S': 'mp4'},
+                'fileExtension': {'S': 'mp4'},
                 'status': {'S': 'UPLOADED'},
                 'created': {'S': '2026-01-27T16:00:00Z'},
                 'userId': {'S': 'user_log'},
@@ -299,8 +301,8 @@ class TestDynamoDBRepository:
                 'unitTime': {'S': 's'},
                 'startTime': {'N': '0'},
                 'endTime': {'N': '15'},
-                'timeInterval': {'L': [{'S': '00:00:00'}]},
-                'maxRetry': {'N': '3'},
+                'intervalTime': {'L': [{'S': '00:00:00'}]},
+                'maxRetries': {'N': '3'},
                 'retries': {'N': '0'},
                 'resize': {'S': 'medium'},
                 'logs': {'L': []}

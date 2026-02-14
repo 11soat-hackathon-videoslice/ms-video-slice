@@ -1,9 +1,9 @@
 """Configurações e fixtures compartilhadas para os testes"""
-import pytest
-import sys
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
+
+import pytest
+import sys
 
 # Configure AWS environment variables before any imports
 os.environ.setdefault('AWS_REGION', 'us-east-1')

@@ -97,7 +97,7 @@ class StorageStorageRepository(StorageInterface):
             logger.error(f"Erro ao enviar arquivo para S3 {target_path}: {str(e)}", exc_info=True)
             raise
 
-    def _create_zipstream(self, output_directory: str) -> zipstream.ZipStream:
+    def _create_zipstream(self, output_directory: str):
         """Cria zipStream a partir dos arquivos num diretório local para upload dinamico"""
         from pathlib import Path
 

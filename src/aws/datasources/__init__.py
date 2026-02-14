@@ -16,3 +16,4 @@ __all__ = ['DynamoDBInterface', 'DynamoDBRepository', 'EventProducer',
            'dynamodb_interface', 'dynamodb_repository', 'event_producer',
            'event_producer_interface', 'logger', 'producer', 'storage',
            'storage_interface', 'storage_repository', 'storage_zipstream']
+
