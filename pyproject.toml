@@ -18,7 +18,7 @@ dependencies = [
     "Pillow>=12.1.1",
     "numpy==1.26.4",
     "cryptography>=46.0.5",
-    "zipstream",
+    "zipstream-ng",
     "pytest",
     "pytest-cov",
     "pytest-mock"
