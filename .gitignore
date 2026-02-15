@@ -241,4 +241,10 @@ $RECYCLE.BIN/
 
 */build/*
 
-# End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
+# End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode.sonar/
+ms-video-slice.iml
+test-results.xml
+test/
+tests/test-results.xml
+tmp/
+.sonar/
