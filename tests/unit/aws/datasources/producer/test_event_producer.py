@@ -23,7 +23,7 @@ class TestEventProducer:
             "videoId": {"S": "123"},
             "status": {"S": "processing"},
             "retries": {"N": "0"},
-            "maxRetry": {"N": "3"}
+            "maxRetries": {"N": "3"}
         }
         schedule_time = datetime(2026, 1, 13, 0, 0, 0)
         schedule_config = {
@@ -51,7 +51,7 @@ class TestEventProducer:
         metadata_dynamodb = {
             "videoId": {"S": "456"},
             "retries": {"N": "2"},
-            "maxRetry": {"N": "5"}
+            "maxRetries": {"N": "5"}
         }
         schedule_time = datetime(2026, 1, 14, 10, 30, 0)
         schedule_config = {
@@ -79,7 +79,7 @@ class TestEventProducer:
         metadata_dynamodb = {
             "videoId": {"S": "789"},
             "retries": {"N": "1"},
-            "maxRetry": {"N": "3"}
+            "maxRetries": {"N": "3"}
         }
         schedule_time = datetime(2026, 1, 15, 12, 0, 0)
         schedule_config = {

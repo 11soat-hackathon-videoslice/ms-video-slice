@@ -79,7 +79,7 @@ class EventProducer(EventProducerInterface):
         # Obtendo informações do evento
         video_id = event_data['videoId']['S']
         retries = event_data['retries']['N']
-        max_retries = event_data['maxRetry']['N']
+        max_retries = event_data['maxRetries']['N']
 
         # Configurando o agendamento
         scheduler_name = f"vdsc-{video_id}-retry-{retries}-of-{max_retries}-{schedule_time.strftime('%Y%m%dT%H%M%S')}"
