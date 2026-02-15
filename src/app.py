@@ -49,10 +49,7 @@ def _process_video_event(vdsc_metadata):
     except Exception as e:
         video_id = vdsc_metadata.video_id if vdsc_metadata else 'desconhecido'
         logger.error(f"Erro ao processar vídeo ID: {video_id} - {str(e)}", exc_info=True)
-        try:
-            controller.handler.handle_exception(e, vdsc_metadata)
-        except Exception as handler_error:
-            logger.error(f"Erro ao processar exception handler: {handler_error}", exc_info=True)
+        return {'statusCode': 500, 'body': json.dumps({"error": f"Erro ao processar vídeo ID: {video_id} - {str(e)}"})}
     finally:
         _clean_file_system()
 

@@ -266,9 +266,11 @@ class TestAppInternals:
              patch('os.unlink'), \
              patch('shutil.rmtree'):
             mock_controller.video_slice_processing.side_effect = Exception('fail')
-            _process_video_event(mock_metadata)
+            result = _process_video_event(mock_metadata)
             assert mock_logger.error.called
-            mock_controller.handler.handle_exception.assert_called_once()
+            # Verifica que retorna resposta de erro 500
+            assert result['statusCode'] == 500
+            assert 'error' in result['body']
 
     def test__process_video_event_with_cleanup(self):
         """Testa processamento com limpeza de arquivos temporários"""
