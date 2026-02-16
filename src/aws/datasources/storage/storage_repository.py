@@ -1,4 +1,5 @@
 import logging
+import os
 import boto3
 import zipstream
 from .storage_interface import StorageInterface
@@ -118,7 +119,9 @@ class StorageStorageRepository(StorageInterface):
     def _check_disk_space(self) -> bool:
         """Verifica se há espaço suficiente no disco local para processar o vídeo"""
         import shutil
-        total, used, free = shutil.disk_usage("/tmp")
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        total, used, free = shutil.disk_usage(temp_dir)
         logger.debug(f"Espaço em disco - Total: {total} bytes, Usado: {used} bytes, Livre: {free} bytes")
 
     def _get_dir_size(self, path: str):

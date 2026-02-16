@@ -23,6 +23,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     records = list(event.get('Records', []))
     logger.info(f"Total de registros a processar: {len(records)}")
 
+    has_error = False
+    error_message = None
+
     for record in records:
         body_raw = record.get('body', '{}')
         if isinstance(body_raw, str):
@@ -33,8 +36,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             dynamodb_metadata = body_raw
 
         vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(dynamodb_metadata)
-        _process_video_event(vdsc_metadata)
+        result = _process_video_event(vdsc_metadata)
 
+        if result and result.get('statusCode') == 500:
+            has_error = True
+            error_message = result.get('body')
+
+    if has_error:
+        return {'statusCode': 500, 'body': error_message if error_message else json.dumps({"error": "Erro durante processamento"})}
 
     return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
 
@@ -48,7 +57,7 @@ def _process_video_event(vdsc_metadata):
     except Exception as e:
         video_id = vdsc_metadata.video_id if vdsc_metadata else 'desconhecido'
         logger.error(f"Erro ao processar vídeo ID: {video_id} - {str(e)}", exc_info=True)
-        raise e
+        return {'statusCode': 500, 'body': json.dumps({"error": f"Erro ao processar vídeo ID: {video_id} - {str(e)}"})}
     finally:
         _clean_file_system()
 

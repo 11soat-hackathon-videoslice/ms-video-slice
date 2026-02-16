@@ -162,12 +162,15 @@ class TestLambdaHandler:
         assert 'Recebido' in body['status']
 
     def test_lambda_handler_invoke_exception(self, valid_dynamodb_event):
-        """Testa lambda_handler com evento válido e falha no processamento interno"""
+        """Testa lambda_handler com evento válido e falha no processamento interno - deve retornar HTTP 500"""
         context = Mock()
         # Patch para simular exceção durante processamento
-        with patch('src.app._process_video_event', side_effect=Exception('fail')):
-            with pytest.raises(Exception, match='fail'):
-                lambda_handler(valid_dynamodb_event, context)
+        with patch('src.app._process_video_event') as mock_process_event:
+            mock_process_event.return_value = {'statusCode': 500, 'body': json.dumps({"error": "Erro ao processar vídeo"})}
+            result = lambda_handler(valid_dynamodb_event, context)
+            assert result['statusCode'] == 500
+            body_content = result['body']
+            assert 'error' in body_content or 'Erro' in body_content
 
     def test_lambda_handler_with_sqs_event(self):
         """Testa lambda_handler com evento vindo do SQS (body como string JSON)"""
@@ -233,6 +236,24 @@ class TestLambdaHandler:
         with pytest.raises(Exception):
             lambda_handler(sqs_event, context)
 
+    def test_lambda_handler_with_multiple_records_one_fails(self, valid_dynamodb_event):
+        """Testa lambda_handler com múltiplos registros onde um falha - deve retornar HTTP 500"""
+        context = Mock()
+        # Adicionar segundo registro
+        event_multi = valid_dynamodb_event.copy()
+        event_multi['Records'].append(valid_dynamodb_event['Records'][0].copy())
+
+        with patch('src.app._process_video_event') as mock_process_event:
+            # Primeiro sucesso, segundo falha
+            mock_process_event.side_effect = [
+                None,
+                {'statusCode': 500, 'body': json.dumps({"error": "Erro no segundo registro"})}
+            ]
+            result = lambda_handler(event_multi, context)
+            assert result['statusCode'] == 500
+            body_content = result['body']
+            assert 'error' in body_content or 'Erro' in body_content
+
 
 class TestAppInternals:
 
@@ -253,7 +274,7 @@ class TestAppInternals:
             mock_logger.info.assert_any_call('Processamento concluído para vídeo ID: vid')
 
     def test__process_video_event_exception(self):
-        """Testa tratamento de exceção durante processamento de vídeo"""
+        """Testa tratamento de exceção durante processamento de vídeo - deve retornar HTTP 500"""
         mock_metadata = MagicMock()
         mock_metadata.video_id = 'vid'
         with patch('src.app.controller') as mock_controller, \
@@ -264,8 +285,10 @@ class TestAppInternals:
              patch('os.unlink'), \
              patch('shutil.rmtree'):
             mock_controller.video_slice_processing.side_effect = Exception('fail')
-            with pytest.raises(Exception, match='fail'):
-                _process_video_event(mock_metadata)
+            result = _process_video_event(mock_metadata)
+            assert result is not None
+            assert result['statusCode'] == 500
+            assert 'error' in result['body']
             mock_logger.error.assert_called()
 
     def test__process_video_event_with_cleanup(self):
@@ -292,7 +315,7 @@ class TestAppInternals:
             mock_logger.info.assert_any_call('Processamento concluído para vídeo ID: vid123')
 
     def test__process_video_event_cleanup_error(self):
-        """Testa limpeza de filesystem mesmo com erro"""
+        """Testa limpeza de filesystem mesmo com erro - deve retornar HTTP 500"""
         mock_metadata = MagicMock()
         mock_metadata.video_id = 'vid456'
 
@@ -305,9 +328,12 @@ class TestAppInternals:
              patch('shutil.rmtree') as mock_rmtree:
 
             mock_controller.video_slice_processing.side_effect = Exception('processing error')
-            with pytest.raises(Exception, match='processing error'):
-                _process_video_event(mock_metadata)
+            result = _process_video_event(mock_metadata)
 
+            # Valida que retornou HTTP 500
+            assert result is not None
+            assert result['statusCode'] == 500
+            assert 'error' in result['body']
             # Valida que tentou limpar mesmo com erro
             mock_logger.error.assert_called()
 
