@@ -121,8 +121,7 @@ class TestS3StorageRepository:
         """Testa criação de zipstream"""
         with patch('pathlib.Path') as mock_path, \
              patch('src.aws.datasources.storage.storage_repository.ZipStream') as mock_zipstream_class, \
-             patch('src.aws.datasources.storage.storage_repository.zipfile') as mock_zipfile:
-            mock_zipfile.ZIP_DEFLATED = 8
+             patch('src.aws.datasources.storage.storage_repository.ZIP_DEFLATED', 8):
             mock_dir = Mock()
             mock_file1 = Mock()
             mock_file1.is_file.return_value = True
