@@ -1,7 +1,9 @@
 """Testes unitários para lambda_handler"""
-import pytest
 import json
 from unittest.mock import Mock, patch
+
+import pytest
+
 from app import lambda_handler
 
 
@@ -104,10 +106,8 @@ class TestVdscProcessHandler:
         context = Mock()
         # Patch para simular exceção interna durante o processamento
         with patch('app._process_video_event', side_effect=Exception('fail')):
-            result = lambda_handler(valid_dynamodb_event, context)
-            assert result['statusCode'] == 500
-            body = json.loads(result['body'])
-            assert 'error' in body
+            with pytest.raises(Exception, match='fail'):
+                lambda_handler(valid_dynamodb_event, context)
 
     def test_handler_with_empty_records(self):
         """Testa handler com lista de registros vazia"""

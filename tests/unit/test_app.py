@@ -1,5 +1,7 @@
-import sys
 import os
+
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 
 """Testes unitários para app.py - Lambda Handler com processamento assíncrono"""
@@ -164,10 +166,8 @@ class TestLambdaHandler:
         context = Mock()
         # Patch para simular exceção durante processamento
         with patch('src.app._process_video_event', side_effect=Exception('fail')):
-            result = lambda_handler(valid_dynamodb_event, context)
-            assert result['statusCode'] == 500
-            body = json.loads(result['body'])
-            assert 'error' in body
+            with pytest.raises(Exception, match='fail'):
+                lambda_handler(valid_dynamodb_event, context)
 
     def test_lambda_handler_with_sqs_event(self):
         """Testa lambda_handler com evento vindo do SQS (body como string JSON)"""
@@ -230,10 +230,8 @@ class TestLambdaHandler:
             ]
         }
 
-        result = lambda_handler(sqs_event, context)
-        assert result['statusCode'] == 500
-        body = json.loads(result['body'])
-        assert 'error' in body
+        with pytest.raises(Exception):
+            lambda_handler(sqs_event, context)
 
 
 class TestAppInternals:
@@ -266,11 +264,9 @@ class TestAppInternals:
              patch('os.unlink'), \
              patch('shutil.rmtree'):
             mock_controller.video_slice_processing.side_effect = Exception('fail')
-            result = _process_video_event(mock_metadata)
-            assert mock_logger.error.called
-            # Verifica que retorna resposta de erro 500
-            assert result['statusCode'] == 500
-            assert 'error' in result['body']
+            with pytest.raises(Exception, match='fail'):
+                _process_video_event(mock_metadata)
+            mock_logger.error.assert_called()
 
     def test__process_video_event_with_cleanup(self):
         """Testa processamento com limpeza de arquivos temporários"""
@@ -309,7 +305,8 @@ class TestAppInternals:
              patch('shutil.rmtree') as mock_rmtree:
 
             mock_controller.video_slice_processing.side_effect = Exception('processing error')
-            _process_video_event(mock_metadata)
+            with pytest.raises(Exception, match='processing error'):
+                _process_video_event(mock_metadata)
 
             # Valida que tentou limpar mesmo com erro
             mock_logger.error.assert_called()

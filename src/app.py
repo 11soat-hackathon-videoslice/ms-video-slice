@@ -1,4 +1,7 @@
-import json, logging, os, shutil
+import json
+import logging
+import os
+import shutil
 from typing import Dict, Any
 
 # Importação de dependências via módulo vdsc_config
@@ -21,21 +24,17 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     logger.info(f"Total de registros a processar: {len(records)}")
 
     for record in records:
-        try:
-            body_raw = record.get('body', '{}')
-            if isinstance(body_raw, str):
-                body_raw = json.loads(body_raw)
-            if body_raw['detail']:
-                dynamodb_metadata = body_raw.get('detail', {}).get('dynamodb', {}).get('NewImage', {})
-            else:
-                dynamodb_metadata = body_raw
+        body_raw = record.get('body', '{}')
+        if isinstance(body_raw, str):
+            body_raw = json.loads(body_raw)
+        if body_raw.get('detail'):
+            dynamodb_metadata = body_raw.get('detail', {}).get('dynamodb', {}).get('NewImage', {})
+        else:
+            dynamodb_metadata = body_raw
 
-            vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(dynamodb_metadata)
-            _process_video_event(vdsc_metadata)
+        vdsc_metadata = VdscMetadataDTO.from_dynamodb_item(dynamodb_metadata)
+        _process_video_event(vdsc_metadata)
 
-        except Exception as e:
-            logger.error(f"Erro ao processar eventos do DynamoDB: {e}", exc_info=True)
-            return {'statusCode': 500, 'body': json.dumps({"error": str(e)})}
 
     return {'statusCode': 202, 'body': json.dumps({"status": f"Recebido {len(records)} evento(s) para processamento."})}
 
@@ -49,7 +48,7 @@ def _process_video_event(vdsc_metadata):
     except Exception as e:
         video_id = vdsc_metadata.video_id if vdsc_metadata else 'desconhecido'
         logger.error(f"Erro ao processar vídeo ID: {video_id} - {str(e)}", exc_info=True)
-        return {'statusCode': 500, 'body': json.dumps({"error": f"Erro ao processar vídeo ID: {video_id} - {str(e)}"})}
+        raise e
     finally:
         _clean_file_system()
 
