@@ -120,7 +120,9 @@ class TestS3StorageRepository:
     def test_create_zipstream(self, repository):
         """Testa criação de zipstream"""
         with patch('pathlib.Path') as mock_path, \
-             patch('src.aws.datasources.storage.storage_repository.zipstream') as mock_zipstream_module:
+             patch('src.aws.datasources.storage.storage_repository.ZipStream') as mock_zipstream_class, \
+             patch('src.aws.datasources.storage.storage_repository.zipfile') as mock_zipfile:
+            mock_zipfile.ZIP_DEFLATED = 8
             mock_dir = Mock()
             mock_file1 = Mock()
             mock_file1.is_file.return_value = True
@@ -128,10 +130,10 @@ class TestS3StorageRepository:
             mock_dir.iterdir.return_value = [mock_file1]
             mock_path.return_value = mock_dir
             mock_zs = Mock()
-            mock_zipstream_module.ZipStream.return_value = mock_zs
+            mock_zipstream_class.return_value = mock_zs
             result = repository._create_zipstream("dir/path")
             mock_path.assert_called_once_with("dir/path")
-            mock_zipstream_module.ZipStream.assert_called_once()
+            mock_zipstream_class.assert_called_once_with(compress_type=8)
             mock_zs.add_path.assert_called_once_with(mock_file1, arcname="file1.txt")
             assert result == mock_zs
 

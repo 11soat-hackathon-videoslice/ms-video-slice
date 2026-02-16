@@ -1,7 +1,8 @@
 import logging
 import os
+
 import boto3
-import zipstream
+from zipstream import ZipStream, ZIP_DEFLATED
 from .storage_interface import StorageInterface
 from .storage_zipstream import StorageZipStreamReader
 
@@ -104,8 +105,7 @@ class StorageStorageRepository(StorageInterface):
 
         dir_path = Path(output_directory)
         logger.debug(f"Diretório dos arquivos: {dir_path}")
-        zs = zipstream.ZipStream()
-        zs.allowZip64 = True
+        zs = ZipStream(compress_type=ZIP_DEFLATED)
         try:
             for file in dir_path.iterdir():
                 if file.is_file():
