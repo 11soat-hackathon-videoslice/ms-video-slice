@@ -248,3 +248,9 @@ test/
 tests/test-results.xml
 tmp/
 .sonar/
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/aws.xml
+/.idea/copilot.data.migration.ask2agent.xml
+/.idea/modules.xml
+/.idea/vcs.xml
