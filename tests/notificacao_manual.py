@@ -38,7 +38,7 @@ def notificacao_manual():
     metadata = VdscMetadataDTO.from_dynamodb_item(event)
     log_message = f"Enviando notificação manual para EventBridge com os seguintes dados: {metadata}"
     channels = [ NotificationChannelsEnum.EMAIL.value, NotificationChannelsEnum.WEB.value ]
-    notification = create_notification(metadata, channels, web_message=log_message, email_template=EmailTemplateEnum.UPDATE_STATUS)
+    notification = create_notification(metadata, channels, web_message=log_message, email_template=EmailTemplateEnum.PROCESSING)
     notification_dto = NotificationDto.from_domain(notification)
     producer.send_notification(notification_dto)
 
