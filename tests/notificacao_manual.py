@@ -11,7 +11,6 @@ sys.path.insert(0, str(src_path))
 core_src_path = Path(__file__).parent.parent.parent / "video-slice-core" / "src"
 sys.path.insert(0, str(core_src_path))
 
-from core.utils import get_event_schedule_timestamp
 from core.dtos import VdscMetadataDTO
 from aws.config import SliceVdscConfig
 from aws.datasources.producer import EventProducer
