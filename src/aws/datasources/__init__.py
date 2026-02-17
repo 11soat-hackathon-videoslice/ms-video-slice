@@ -6,8 +6,7 @@ from . import storage
 from .database import (DynamoDBInterface, DynamoDBRepository,
                        dynamodb_interface, dynamodb_repository, logger,)
 from .metrics import (CloudWatchInterface, CloudWatchRepository,
-                      cloudwatch_interface, cloudwatch_repository, logger,
-                      metrics,)
+                      cloudwatch_interface, cloudwatch_repository, logger,)
 from .producer import (EventProducer, EventProducerInterface, event_producer,
                        event_producer_interface, logger,)
 from .storage import (StorageInterface, StorageStorageRepository,

@@ -4,8 +4,8 @@ from . import datasources
 from . import handler
 
 from .config import (SliceVdscConfig, cloudwatch, config, controller,
-                     dataproxy, dynamodb_repository, event_producer, resize,
-                     s3_repository, schedule_event_rules, slice_config,
+                     dataproxy, dynamodb_repository, event_producer, metrics,
+                     resize, s3_repository, schedule_event_rules, slice_config,
                      vdsc_handler,)
 from .dataproxy import (SliceDataProxy, dict_to_dynamodb_format,
                         slice_dataproxy,)

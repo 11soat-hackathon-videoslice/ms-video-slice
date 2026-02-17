@@ -5,13 +5,14 @@ import shutil
 from typing import Dict, Any
 
 # Importação de dependências via módulo vdsc_config
-from aws.config.slice_config import controller, config
+from aws.config.slice_config import controller, config, metrics
 from core.dtos import VdscMetadataDTO
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@metrics.log_metrics
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Handler principal da Lambda para processamento de eventos do DynamoDB"""
 

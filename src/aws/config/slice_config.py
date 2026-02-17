@@ -9,6 +9,9 @@ from aws.handler.vdsc_exception_handler import VdscExceptionHandler
 
 from core.adapters.slice.slice_controller import SliceController
 from core.dtos import VdscConfigDTO, VdscSettingsDTO, ResizeDTO, ScheduleRulesDTO
+from aws_lambda_powertools import Metrics
+
+metrics = Metrics(namespace="VideoSliceMetrics", service="VideoSlice")
 
 
 #Varilável de ambiente VDSC_RESIZE esperada no formato JSON, ex: '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}'
@@ -77,7 +80,7 @@ dynamodb_repository = DynamoDBRepository(config.dynamodb_table_name, config.aws_
 s3_repository = StorageStorageRepository(config.s3_bucket_name, config.aws_region)
 event_producer = EventProducer()
 vdsc_handler = VdscExceptionHandler()
-cloudwatch = CloudWatchRepository()
+cloudwatch = CloudWatchRepository(metrics_provider=metrics)
 
 
 # DataProxy e Controller globais (garante passagem pela camada Controller)
