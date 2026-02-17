@@ -40,7 +40,7 @@ class CloudWatchRepository(CloudWatchInterface):
         self.metrics.add_dimension(name="ResoluçãoOriginal", value=self._get_resolution_range(original_min_size))
         self.metrics.add_dimension(name="QualidadeDeSaidaImage", value=self._get_quality_output_range(quality_output_level))
         self.metrics.add_dimension(name="ResoluçãoNova", value=self._get_resolution_range(resize_output))
-        logger.debug(f"Dimensões adicionadas: {self.metrics.serialize_metric_set(dimensions=self.metrics._dimensions)}")
+        logger.debug("Dimensões adicionadas com sucesso")
 
 
         # Adiciona métricas
@@ -50,9 +50,9 @@ class CloudWatchRepository(CloudWatchInterface):
         self.metrics.add_metric(name="TempoTotalProcessamentoSegundos", value=process_total_time, unit=MetricUnit.Seconds)
         self.metrics.add_metric(name="TempoMedioPorFrameSegundos", value=efficiency_per_frame, unit=MetricUnit.Seconds)
         self.metrics.add_metric(name="UsoMemoriaMB", value=float(self._get_memory_usage()), unit=MetricUnit.Megabytes)
-        logger.debug(f"Métricas adicionadas: {self.metrics.serialize_metric_set(metrics=self.metrics.metric_set)}")
+        logger.debug("Métricas adicionadas com sucesso")
 
-        logger.debug("Métricas enviadas e estado do Metrics limpo para próxima execução")
+        logger.debug("Métricas processadas com sucesso")
 
     def _get_resolution_range(self, resolution) -> str:
         """Converte resolução para categoria de qualidade"""
