@@ -38,8 +38,7 @@ class CloudWatchRepository(CloudWatchInterface):
         metrics.add_dimension(name="Redimensionado", value=str(resize))
         metrics.add_dimension(name="ResoluçãoOriginal", value=self._get_resolution_range(original_min_size))
         metrics.add_dimension(name="QualidadeDeSaidaImage", value=self._get_quality_output_range(quality_output_level))
-        if resize:
-            metrics.add_dimension(name="ResoluçãoNova", value=self._get_resolution_range(resize_output))
+        metrics.add_dimension(name="ResoluçãoNova", value=self._get_resolution_range(resize_output))
         logger.debug(f"Dimensões adicionadas: {metrics._dimensions}")
 
 
@@ -62,8 +61,8 @@ class CloudWatchRepository(CloudWatchInterface):
         try:
             resolution = int(resolution)
         except (TypeError, ValueError) as e:
-            logger.warning(f"Erro ao converter resolução '{resolution}' para int: {e}. Usando valor padrão 720.")
-            resolution = 720
+            logger.warning(f"Erro ao converter resolução '{resolution}' para int: {e}. Usano valor padrão 0.")
+            resolution = 0
 
         if resolution >= 1080:
             return '1080p ou superior'
@@ -73,6 +72,8 @@ class CloudWatchRepository(CloudWatchInterface):
             return '480p'
         if resolution >= 360:
             return '360p'
+        if resolution == 0:
+            return 'Sem Redimensionamento'
         return 'Menor que 360p'
 
     def _get_quality_output_range(self, quality_output_level) -> str:
