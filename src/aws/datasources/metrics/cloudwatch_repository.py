@@ -38,9 +38,9 @@ class CloudWatchRepository(CloudWatchInterface):
         metrics.add_dimension(name="Redimensionado", value=str(resize))
         metrics.add_dimension(name="ResoluçãoOriginal", value=self._get_resolution_range(original_min_size))
         metrics.add_dimension(name="QualidadeDeSaidaImage", value=self._get_quality_output_range(quality_output_level))
-        if resize_output is not None:
+        if resize:
             metrics.add_dimension(name="ResoluçãoNova", value=self._get_resolution_range(resize_output))
-        logger.debug(f"Dimensões adicionadas: {metrics.dimensions}")
+        logger.debug(f"Dimensões adicionadas: {metrics._dimensions}")
 
 
         # Adiciona métricas
@@ -50,7 +50,7 @@ class CloudWatchRepository(CloudWatchInterface):
         metrics.add_metric(name="TempoTotalProcessamentoSegundos", value=process_total_time, unit=MetricUnit.Seconds)
         metrics.add_metric(name="TempoMedioPorFrameSegundos", value=efficiency_per_frame, unit=MetricUnit.Seconds)
         metrics.add_metric(name="UsoMemoriaMB", value=float(self._get_memory_usage()), unit=MetricUnit.Megabytes)
-        logger.debug(f"Métricas adicionadas: {metrics.metrics}")
+        logger.debug(f"Métricas adicionadas: {metrics._metrics}")
 
         metrics.flush_metrics()
         metrics.clear_metrics()
