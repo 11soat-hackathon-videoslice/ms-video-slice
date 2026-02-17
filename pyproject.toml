@@ -21,7 +21,8 @@ dependencies = [
     "zipstream-ng",
     "pytest",
     "pytest-cov",
-    "pytest-mock"
+    "pytest-mock",
+    "aws_lambda_powertools>=3.24.0"
 ]
 
 [project.urls]

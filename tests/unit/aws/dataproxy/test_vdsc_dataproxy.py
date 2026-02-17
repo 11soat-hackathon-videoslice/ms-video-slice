@@ -26,12 +26,18 @@ class TestVdscDataProxy:
         return Mock()
 
     @pytest.fixture
-    def dataproxy(self, mock_dynamodb, mock_s3, mock_event_producer):
+    def mock_cloudwatch(self):
+        """Mock para CloudWatch"""
+        return Mock()
+
+    @pytest.fixture
+    def dataproxy(self, mock_dynamodb, mock_s3, mock_event_producer, mock_cloudwatch):
         """Fixture para criar instância do DataProxy"""
         return SliceDataProxy(
             dynamodb=mock_dynamodb,
             storage=mock_s3,
-            event_producer=mock_event_producer
+            event_producer=mock_event_producer,
+            cloudwatch=mock_cloudwatch
         )
 
     def test_delete_file(self, dataproxy, mock_s3):
@@ -143,6 +149,114 @@ class TestVdscDataProxy:
         dataproxy.delete_temp_files("tmp/path")
         mock_s3.delete_temp_files.assert_called_once_with("tmp/path")
 
+    def test_send_metric(self, dataproxy, mock_cloudwatch):
+        """Testa envio de métrica"""
+        metric_info = {
+            'resize': True,
+            'original_min_size': 1080,
+            'resize_output': 720,
+            'quality_output_level': 'high',
+            'frames_processed': 10,
+            'workers': 4,
+            'video_size_mb': 100.0,
+            'process_total_time_seconds': 15.5,
+            'efficiency_per_frame_seconds': 1.55
+        }
+
+        dataproxy.send_metric(metric_info)
+
+        mock_cloudwatch.send_metric.assert_called_once_with(metric_info)
+
+    def test_send_metric_without_resize(self, dataproxy, mock_cloudwatch):
+        """Testa envio de métrica sem redimensionamento"""
+        metric_info = {
+            'resize': False,
+            'original_min_size': 720,
+            'resize_output': 720,
+            'quality_output_level': 'original',
+            'frames_processed': 5,
+            'workers': 2,
+            'video_size_mb': 50.0,
+            'process_total_time_seconds': 8.0,
+            'efficiency_per_frame_seconds': 1.6
+        }
+
+        dataproxy.send_metric(metric_info)
+
+        mock_cloudwatch.send_metric.assert_called_once_with(metric_info)
+
+    def test_send_metric_with_different_resolutions(self, dataproxy, mock_cloudwatch):
+        """Testa envio de métricas com diferentes resoluções"""
+        resolutions = [
+            (1080, 720),  # Ultra -> High
+            (720, 480),   # High -> Medium
+            (480, 360),   # Medium -> Low
+        ]
+
+        for original, output in resolutions:
+            metric_info = {
+                'resize': True,
+                'original_min_size': original,
+                'resize_output': output,
+                'quality_output_level': 'medium',
+                'frames_processed': 3,
+                'workers': 2,
+                'video_size_mb': 25.0,
+                'process_total_time_seconds': 5.0,
+                'efficiency_per_frame_seconds': 1.67
+            }
+
+            dataproxy.send_metric(metric_info)
+
+        assert mock_cloudwatch.send_metric.call_count == len(resolutions)
+
+    def test_send_metric_with_high_performance(self, dataproxy, mock_cloudwatch):
+        """Testa envio de métrica com alto desempenho (muitos workers)"""
+        metric_info = {
+            'resize': True,
+            'original_min_size': 1080,
+            'resize_output': 480,
+            'quality_output_level': 'medium',
+            'frames_processed': 100,
+            'workers': 16,
+            'video_size_mb': 500.0,
+            'process_total_time_seconds': 60.0,
+            'efficiency_per_frame_seconds': 0.6
+        }
+
+        dataproxy.send_metric(metric_info)
+
+        mock_cloudwatch.send_metric.assert_called_once_with(metric_info)
+        args = mock_cloudwatch.send_metric.call_args[0]
+        assert args[0]['workers'] == 16
+        assert args[0]['efficiency_per_frame_seconds'] < 1.0
+
+    def test_send_metric_preserves_all_fields(self, dataproxy, mock_cloudwatch):
+        """Testa que send_metric preserva todos os campos da métrica"""
+        metric_info = {
+            'resize': True,
+            'original_min_size': 1080,
+            'resize_output': 720,
+            'quality_output_level': 'high',
+            'frames_processed': 10,
+            'workers': 4,
+            'video_size_mb': 100.0,
+            'process_total_time_seconds': 15.5,
+            'efficiency_per_frame_seconds': 1.55
+        }
+
+        dataproxy.send_metric(metric_info)
+
+        args = mock_cloudwatch.send_metric.call_args[0]
+        assert args[0]['resize'] == metric_info['resize']
+        assert args[0]['original_min_size'] == metric_info['original_min_size']
+        assert args[0]['resize_output'] == metric_info['resize_output']
+        assert args[0]['quality_output_level'] == metric_info['quality_output_level']
+        assert args[0]['frames_processed'] == metric_info['frames_processed']
+        assert args[0]['workers'] == metric_info['workers']
+        assert args[0]['video_size_mb'] == metric_info['video_size_mb']
+        assert args[0]['process_total_time_seconds'] == metric_info['process_total_time_seconds']
+        assert args[0]['efficiency_per_frame_seconds'] == metric_info['efficiency_per_frame_seconds']
 
 @pytest.mark.unit
 class TestDictToDynamoDBFormat:

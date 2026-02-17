@@ -1,3 +1,4 @@
+
 """Testes unitários para S3StorageRepository"""
 from unittest.mock import Mock, patch
 
@@ -159,3 +160,141 @@ class TestS3StorageRepository:
             mock_create_zipstream.side_effect = Exception("Zip error")
             with pytest.raises(Exception):
                 repository.upload_finished_zip("output/dir", "target/path.zip")
+
+    def test_s3_client_lazy_loading(self):
+        """Testa que o cliente S3 é criado apenas no primeiro acesso"""
+        with patch('boto3.client') as mock_client:
+            repo = StorageStorageRepository(bucket_name="test-bucket", region="us-east-1")
+
+            # Ainda não deve ter criado o cliente
+            assert repo._s3_client is None
+            mock_client.assert_not_called()
+
+            # Primeiro acesso cria o cliente
+            _ = repo.s3_client
+            mock_client.assert_called_once_with('s3', region_name='us-east-1')
+
+            # Segundo acesso reutiliza o mesmo cliente
+            _ = repo.s3_client
+            mock_client.assert_called_once()  # Ainda apenas uma chamada
+
+    def test_s3_resource_lazy_loading(self):
+        """Testa que o resource S3 é criado apenas no primeiro acesso"""
+        with patch('boto3.resource') as mock_resource:
+            mock_bucket = Mock()
+            mock_resource.return_value.Bucket.return_value = mock_bucket
+
+            repo = StorageStorageRepository(bucket_name="test-bucket", region="us-east-1")
+
+            # Ainda não deve ter criado o resource
+            assert repo._s3_resource is None
+            mock_resource.assert_not_called()
+
+            # Primeiro acesso cria o resource
+            _ = repo.s3_resource
+            mock_resource.assert_called_once_with('s3', region_name='us-east-1')
+
+            # Segundo acesso reutiliza o mesmo resource
+            _ = repo.s3_resource
+            mock_resource.assert_called_once()  # Ainda apenas uma chamada
+
+    def test_s3_client_setter(self):
+        """Testa setter do cliente S3 para mocking"""
+        repo = StorageStorageRepository(bucket_name="test-bucket", region="us-east-1")
+        mock_client = Mock()
+
+        repo.s3_client = mock_client
+
+        assert repo._s3_client == mock_client
+        assert repo.s3_client == mock_client
+
+    def test_s3_resource_setter(self):
+        """Testa setter do resource S3 para mocking"""
+        repo = StorageStorageRepository(bucket_name="test-bucket", region="us-east-1")
+        mock_resource = Mock()
+
+        repo.s3_resource = mock_resource
+
+        assert repo._s3_resource == mock_resource
+        assert repo.s3_resource == mock_resource
+
+    def test_check_disk_space(self, repository):
+        """Testa verificação de espaço em disco"""
+        with patch('shutil.disk_usage') as mock_disk_usage, \
+             patch('tempfile.gettempdir', return_value='/tmp'):
+            mock_disk_usage.return_value = (1000000000, 500000000, 500000000)  # total, used, free
+
+            # Método não retorna nada, apenas loga
+            result = repository._check_disk_space()
+
+            assert result is None
+            mock_disk_usage.assert_called_once_with('/tmp')
+
+    def test_get_dir_size(self, repository):
+        """Testa cálculo do tamanho de um diretório"""
+        with patch('os.scandir') as mock_scandir:
+            # Mock de entradas do diretório
+            mock_entry1 = Mock()
+            mock_entry1.is_file.return_value = True
+            mock_entry1.stat.return_value.st_size = 1024
+
+            mock_entry2 = Mock()
+            mock_entry2.is_file.return_value = True
+            mock_entry2.stat.return_value.st_size = 2048
+
+            mock_entry3 = Mock()
+            mock_entry3.is_file.return_value = False  # Diretório, não conta
+
+            mock_scandir.return_value.__enter__.return_value = [mock_entry1, mock_entry2, mock_entry3]
+
+            repository._get_dir_size('/test/path')
+
+            mock_scandir.assert_called_once_with('/test/path')
+
+    def test_create_zipstream_error(self, repository):
+        """Testa erro ao criar zipstream"""
+        with patch('pathlib.Path') as mock_path:
+            mock_path.return_value.iterdir.side_effect = Exception("Directory error")
+
+            with pytest.raises(Exception, match="Directory error"):
+                repository._create_zipstream("invalid/path")
+
+    def test_create_zipstream_with_subdirectories(self, repository):
+        """Testa criação de zipstream ignorando subdiretórios"""
+        with patch('pathlib.Path') as mock_path, \
+             patch('src.aws.datasources.storage.storage_repository.ZipStream') as mock_zipstream_class, \
+             patch('src.aws.datasources.storage.storage_repository.ZIP_DEFLATED', 8):
+
+            mock_dir = Mock()
+
+            # Mock de arquivo
+            mock_file = Mock()
+            mock_file.is_file.return_value = True
+            mock_file.name = "file1.txt"
+
+            # Mock de subdiretório (não deve ser adicionado)
+            mock_subdir = Mock()
+            mock_subdir.is_file.return_value = False
+
+            mock_dir.iterdir.return_value = [mock_file, mock_subdir]
+            mock_path.return_value = mock_dir
+
+            mock_zs = Mock()
+            mock_zipstream_class.return_value = mock_zs
+
+            result = repository._create_zipstream("dir/path")
+
+            # Apenas o arquivo deve ser adicionado, não o subdiretório
+            mock_zs.add_path.assert_called_once_with(mock_file, arcname="file1.txt")
+            assert result == mock_zs
+
+    def test_upload_finished_zip_with_upload_error(self, repository, mock_s3_client):
+        """Testa erro durante upload para S3"""
+        with patch.object(repository, '_create_zipstream') as mock_create_zipstream, \
+             patch('src.aws.datasources.storage.storage_repository.StorageZipStreamReader'):
+            mock_create_zipstream.return_value = Mock()
+            mock_s3_client.upload_fileobj.side_effect = Exception("S3 upload error")
+
+            with pytest.raises(Exception, match="S3 upload error"):
+                repository.upload_finished_zip("output/dir", "target/path.zip")
+

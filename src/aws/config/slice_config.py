@@ -1,6 +1,7 @@
 import json, os
 
 from aws.datasources.database.dynamodb_repository import DynamoDBRepository
+from aws.datasources.metrics.cloudwatch_repository import CloudWatchRepository
 from aws.datasources.storage.storage_repository import StorageStorageRepository
 from aws.datasources.producer.event_producer import EventProducer
 from aws.dataproxy.slice_dataproxy import SliceDataProxy
@@ -76,8 +77,9 @@ dynamodb_repository = DynamoDBRepository(config.dynamodb_table_name, config.aws_
 s3_repository = StorageStorageRepository(config.s3_bucket_name, config.aws_region)
 event_producer = EventProducer()
 vdsc_handler = VdscExceptionHandler()
+cloudwatch = CloudWatchRepository()
 
 
 # DataProxy e Controller globais (garante passagem pela camada Controller)
-dataproxy = SliceDataProxy(dynamodb=dynamodb_repository, storage=s3_repository, event_producer=event_producer)
+dataproxy = SliceDataProxy(dynamodb=dynamodb_repository, storage=s3_repository, event_producer=event_producer, cloudwatch=cloudwatch)
 controller = SliceController(dataproxy=dataproxy, handler=vdsc_handler)

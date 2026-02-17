@@ -1,5 +1,6 @@
 import datetime
 
+from aws.datasources.metrics.cloudwatch_interface import CloudWatchInterface
 from core.interfaces.slice.slice_dataproxy_interface import SliceDataProxyInterface
 from core.dtos.vdsc_metadata_dto import VdscMetadataDTO
 from core.dtos.notification_dto import NotificationDto
@@ -9,10 +10,13 @@ from aws.datasources.producer.event_producer_interface import EventProducerInter
 
 class SliceDataProxy(SliceDataProxyInterface):
 
-    def __init__(self, dynamodb: DynamoDBInterface, storage: StorageInterface, event_producer: EventProducerInterface):
+
+
+    def __init__(self, dynamodb: DynamoDBInterface, storage: StorageInterface, event_producer: EventProducerInterface, cloudwatch: CloudWatchInterface):
         self.dynamodb = dynamodb
         self.storage = storage
         self.event_producer = event_producer
+        self.cloudwatch = cloudwatch
 
     def delete_file(self, file_path: str) -> None:
         self.storage.delete_file(file_path)
@@ -25,6 +29,9 @@ class SliceDataProxy(SliceDataProxyInterface):
 
     def send_schedule_retry_event(self, vdsc_metadata: VdscMetadataDTO, schedule_time: datetime, schedule_config: dict) -> None:
         self.event_producer.send_schedule_retry_event(vdsc_metadata.to_dynamodb_item(), schedule_time, schedule_config)
+
+    def send_metric(self, metric_info: str) -> None:
+        self.cloudwatch.send_metric(metric_info)
 
     def send_notification(self, notification: NotificationDto) -> None:
         self.event_producer.send_notification(notification)

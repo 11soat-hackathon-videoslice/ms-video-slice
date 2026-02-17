@@ -1,7 +1,9 @@
 import sys
 import os
 import json
+import boto3
 from pathlib import Path
+
 
 # Adicionar path para o diretório src do ms-video-slice
 src_path = Path(__file__).parent.parent / "src"
@@ -17,7 +19,13 @@ sys.path.insert(0, str(core_src_path))
 def exemplo_atualizacao_completa():
     """Exemplo de atualização completa de metadados no formato DynamoDB"""
     from app import lambda_handler
-    os.system('aws s3 mv s3://vdsc-prd-s3-videos/processing/ml9jexx5TWrC.mp4 s3://vdsc-prd-s3-videos/uploads/ml9jexx5TWrC.mp4')
+
+    local_path = r'C:\Users\titop\OneDrive\Videos\ml9jexx5TWrC.mp4'
+    s3 = boto3.client('s3')
+    bucket_name = 'vdsc-prd-s3-videos'
+    object_key = 'uploads/ml9jexx5TWrC.mp4'
+    s3.upload_file(local_path, bucket_name, object_key)
+
 
     # Caminho do arquivo JSON com o evento do DynamoDB
     json_file_path = os.path.join(os.path.dirname(__file__), '..', 'events', 'sqs_insert_event.json')
