@@ -33,15 +33,14 @@ class CloudWatchRepository(CloudWatchInterface):
             efficiency_per_frame = float(metric_info.get('efficiency_per_frame_seconds', 0.0))
             memory_usage = float(self._get_memory_usage())
 
-            self.metrics.set_dimensions({
-                "Redimensionado": resize,
-                "ResolucaoOriginal": self._get_resolution_range(original_min_size),
-                "QualidadeSaida": self._get_quality_output_range(quality_output_level),
-                "ResolucaoNova": self._get_resolution_range(resize_output),
-                "Service": "VideoSlice"
-            })
+            # Adicionar dimensões
+            self.metrics.add_dimension(name="Redimensionado", value=resize)
+            self.metrics.add_dimension(name="ResolucaoOriginal", value=self._get_resolution_range(original_min_size))
+            self.metrics.add_dimension(name="QualidadeSaida", value=self._get_quality_output_range(quality_output_level))
+            self.metrics.add_dimension(name="ResolucaoNova", value=self._get_resolution_range(resize_output))
+            self.metrics.add_dimension(name="Service", value="VideoSlice")
 
-            # 2. Adicionar métricas
+            # Adicionar métricas
             self.metrics.add_metric(name="FramesProcessados", value=frames_processed, unit=MetricUnit.Count)
             self.metrics.add_metric(name="WorkersCount", value=workers, unit=MetricUnit.Count)
             self.metrics.add_metric(name="TamanhoVideoMB", value=video_size_mb, unit=MetricUnit.Megabytes)

@@ -55,15 +55,14 @@ class TestCloudWatchRepository:
 
         repository.send_metric(metric_info_with_resize)
 
-        # Verifica que set_dimensions foi chamado com as dimensões corretas
-        repository.metrics.set_dimensions.assert_called_once()
-        call_args = repository.metrics.set_dimensions.call_args[0][0]
+        # Verifica que add_dimension foi chamado 5 vezes (uma para cada dimensão)
+        assert repository.metrics.add_dimension.call_count == 5
 
-        assert call_args["Redimensionado"] == "Sim"
-        assert call_args["ResolucaoOriginal"] == "1080p ou superior"
-        assert call_args["ResolucaoNova"] == "720p"
-        assert call_args["QualidadeSaida"] == "Alta"
-        assert call_args["Service"] == "VideoSlice"
+        repository.metrics.add_dimension.assert_any_call(name="Redimensionado", value="Sim")
+        repository.metrics.add_dimension.assert_any_call(name="ResolucaoOriginal", value="1080p ou superior")
+        repository.metrics.add_dimension.assert_any_call(name="ResolucaoNova", value="720p")
+        repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Alta")
+        repository.metrics.add_dimension.assert_any_call(name="Service", value="VideoSlice")
 
         # Verifica que métricas foram adicionadas (6 métricas)
         assert repository.metrics.add_metric.call_count == 6
@@ -79,12 +78,12 @@ class TestCloudWatchRepository:
 
         repository.send_metric(metric_info_without_resize)
 
-        # Verifica que set_dimensions foi chamado
-        repository.metrics.set_dimensions.assert_called_once()
-        call_args = repository.metrics.set_dimensions.call_args[0][0]
+        # Verifica que add_dimension foi chamado 5 vezes
+        assert repository.metrics.add_dimension.call_count == 5
 
-        assert call_args["Redimensionado"] == "Nao"
-        assert call_args["QualidadeSaida"] == "Média"
+        repository.metrics.add_dimension.assert_any_call(name="Redimensionado", value="Nao")
+        repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Média")
+        repository.metrics.add_dimension.assert_any_call(name="Service", value="VideoSlice")
 
     def test_get_resolution_range_ultra(self, repository):
         """Testa classificação de resolução ultra (1080p ou superior)"""
@@ -231,8 +230,7 @@ class TestCloudWatchRepository:
 
         repository.send_metric(metric_info)
 
-        call_args = repository.metrics.set_dimensions.call_args[0][0]
-        assert call_args["QualidadeSaida"] == "Alta"
+        repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Alta")
 
     @patch('aws.datasources.metrics.cloudwatch_repository.resource')
     def test_send_metric_with_multiple_workers(self, mock_resource, repository):
@@ -288,8 +286,7 @@ class TestCloudWatchRepository:
 
         repository.send_metric(metric_info)
 
-        call_args = repository.metrics.set_dimensions.call_args[0][0]
-        assert call_args["QualidadeSaida"] == "Baixa"
+        repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Baixa")
 
     def test_get_resolution_range_boundary_values(self, repository):
         """Testa valores limites de classificação de resolução"""
@@ -356,11 +353,10 @@ class TestCloudWatchRepository:
 
         repository.send_metric(metric_info)
 
-        call_args = repository.metrics.set_dimensions.call_args[0][0]
-        assert call_args["Redimensionado"] == "Nao"
-        assert call_args["ResolucaoOriginal"] == "1080p ou superior"
-        assert call_args["ResolucaoNova"] == "1080p ou superior"
-        assert call_args["QualidadeSaida"] == "Alta"
+        repository.metrics.add_dimension.assert_any_call(name="Redimensionado", value="Nao")
+        repository.metrics.add_dimension.assert_any_call(name="ResolucaoOriginal", value="1080p ou superior")
+        repository.metrics.add_dimension.assert_any_call(name="ResolucaoNova", value="1080p ou superior")
+        repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Alta")
 
     @patch('aws.datasources.metrics.cloudwatch_repository.resource')
     def test_send_metric_with_missing_fields(self, mock_resource, repository):
@@ -379,7 +375,7 @@ class TestCloudWatchRepository:
         repository.send_metric(metric_info)
 
         # Verifica que não lançou exceção e usou valores padrão
-        repository.metrics.set_dimensions.assert_called_once()
+        assert repository.metrics.add_dimension.call_count == 5
         assert repository.metrics.add_metric.call_count == 6
 
     @patch('aws.datasources.metrics.cloudwatch_repository.resource')
