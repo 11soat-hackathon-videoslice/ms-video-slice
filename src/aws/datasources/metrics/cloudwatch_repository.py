@@ -38,7 +38,7 @@ class CloudWatchRepository(CloudWatchInterface):
             self.metrics.add_dimension(name="ResolucaoOriginal", value=self._get_resolution_range(original_min_size))
             self.metrics.add_dimension(name="QualidadeSaida", value=self._get_quality_output_range(quality_output_level))
             self.metrics.add_dimension(name="ResolucaoNova", value=self._get_resolution_range(resize_output))
-            self.metrics.add_dimension(name="Service", value="VideoSlice")
+            self.metrics.add_dimension(name="service", value="VideoSlice")
 
             # Adicionar métricas
             self.metrics.add_metric(name="FramesProcessados", value=frames_processed, unit=MetricUnit.Count)

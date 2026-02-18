@@ -62,7 +62,7 @@ class TestCloudWatchRepository:
         repository.metrics.add_dimension.assert_any_call(name="ResolucaoOriginal", value="1080p ou superior")
         repository.metrics.add_dimension.assert_any_call(name="ResolucaoNova", value="720p")
         repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Alta")
-        repository.metrics.add_dimension.assert_any_call(name="Service", value="VideoSlice")
+        repository.metrics.add_dimension.assert_any_call(name="service", value="VideoSlice")
 
         # Verifica que métricas foram adicionadas (6 métricas)
         assert repository.metrics.add_metric.call_count == 6
@@ -83,7 +83,7 @@ class TestCloudWatchRepository:
 
         repository.metrics.add_dimension.assert_any_call(name="Redimensionado", value="Nao")
         repository.metrics.add_dimension.assert_any_call(name="QualidadeSaida", value="Média")
-        repository.metrics.add_dimension.assert_any_call(name="Service", value="VideoSlice")
+        repository.metrics.add_dimension.assert_any_call(name="service", value="VideoSlice")
 
     def test_get_resolution_range_ultra(self, repository):
         """Testa classificação de resolução ultra (1080p ou superior)"""
