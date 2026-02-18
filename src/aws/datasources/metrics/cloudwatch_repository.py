@@ -16,7 +16,7 @@ class CloudWatchRepository(CloudWatchInterface):
     def __init__(self, metrics_provider: Metrics):
         self.metrics = metrics_provider
 
-        def send_metric(self, metric_info: dict):
+    def send_metric(self, metric_info: dict):
         logger.debug(f"Enviando métricas para CloudWatch: {metric_info}")
 
         try:
@@ -25,7 +25,7 @@ class CloudWatchRepository(CloudWatchInterface):
             original_min_size = int(metric_info.get('original_min_size', 0))
             resize_output = int(metric_info.get('resize_output', 0))
             quality_output_level = int(metric_info.get('quality_output_level', 75))
-            
+
             frames_processed = int(metric_info.get('frames_processed', 0))
             workers = int(metric_info.get('workers', 0))
             video_size_mb = float(metric_info.get('video_size_mb', 0.0))
@@ -33,8 +33,6 @@ class CloudWatchRepository(CloudWatchInterface):
             efficiency_per_frame = float(metric_info.get('efficiency_per_frame_seconds', 0.0))
             memory_usage = float(self._get_memory_usage())
 
-            # 1. Definir Dimensões (Sem acentos nas chaves/Names)
-            # O CloudWatch agrupa por este conjunto exato
             self.metrics.set_dimensions({
                 "Redimensionado": resize,
                 "ResolucaoOriginal": self._get_resolution_range(original_min_size),
@@ -55,7 +53,7 @@ class CloudWatchRepository(CloudWatchInterface):
 
         except Exception as e:
             logger.error(f"Erro ao processar métricas: {e}", exc_info=True)
-            # Não levantamos o erro aqui para não quebrar a Lambda por causa de telemetria
+
 
     def _get_resolution_range(self, resolution) -> str:
         """Converte resolução para categoria de qualidade"""
