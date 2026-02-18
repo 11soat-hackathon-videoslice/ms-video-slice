@@ -1,0 +1,69 @@
+{
+  "fileName": {
+    "S": "Video Project 1"
+  },
+  "created": {
+    "S": "2026-01-26 17:13:10"
+  },
+  "totalTime": {
+    "N": "10"
+  },
+  "videoId": {
+    "S": "mkvltfiozmaT"
+  },
+  "userId": {
+    "S": "848834a8-20e1-7004-ee3b-4ba1495239d8"
+  },
+  "resize": {
+    "S": "medium"
+  },
+  "maxRetries": {
+    "N": "3"
+  },
+  "retries": {
+    "N": "0"
+  },
+  "fileExtension": {
+    "S": "mp4"
+  },
+  "qualityOutputLevel": {
+    "N": 100
+  },
+  "intervalTime": {
+    "L": [
+      {
+        "S": "2"
+      },
+      {
+        "S": "3"
+      },
+      {
+        "S": "4"
+      },
+      {
+        "S": "5"
+      },
+      {
+        "S": "6"
+      },
+      {
+        "S": "7"
+      },
+      {
+        "S": "8"
+      }
+    ]
+  },
+  "startTime": {
+    "N": "2"
+  },
+  "endTime": {
+    "N": "8"
+  },
+  "status": {
+    "S": "UPLOADED"
+  },
+  "unitTime": {
+    "S": "s"
+  }
+}
