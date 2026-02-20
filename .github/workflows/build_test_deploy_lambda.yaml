@@ -21,6 +21,7 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - '.github/workflows/build_test_deploy_lambda.yaml'
 
   pull_request:
     types: [closed]
