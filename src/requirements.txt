@@ -12,4 +12,4 @@ cryptography>=46.0.5
 zipstream-ng
 aws_lambda_powertools==3.24.0
 
-vdsc-core @ git+https://github.com/11soat-hackton-videoslice/video-slice-core.git@develop
+vdsc-core @ git+https://github.com/11soat-hackton-videoslice/video-slice-core.git@v1.0.0
