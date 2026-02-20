@@ -117,18 +117,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configurar autenticação Git com PAT
-        run: |
-          git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "https://github.com/"
-          git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "ssh://git@github.com/"
-          git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "git@github.com:"
-
       - name: Atualizar requirements.txt com versão do vdsc-core
         run: |
           CORE_VERSION="${{ needs.resolve-core-version.outputs.core_version }}"
           echo "🔄 Atualizando vdsc-core para @${CORE_VERSION}"
-          sed -i "s|vdsc-core @ .*|vdsc-core @ git+https://github.com/${{ env.CORE_REPO }}.git@${CORE_VERSION}|" src/requirements.txt
-          cat src/requirements.txt
+          sed -i "s|vdsc-core @ .*|vdsc-core @ git+https://${{ secrets.VDSC_PAT }}@github.com/${{ env.CORE_REPO }}.git@${CORE_VERSION}|" src/requirements.txt
+          echo "📋 requirements.txt atualizado (URL com autenticação embutida)"
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -201,16 +195,12 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Configurar autenticação Git com PAT
-        run: |
-          git config --global url."https://${{ secrets.VDSC_PAT }}@github.com/".insteadOf "https://github.com/"
-
       - name: Atualizar requirements.txt com versão do vdsc-core
         run: |
           CORE_VERSION="${{ needs.resolve-core-version.outputs.core_version }}"
           echo "🔄 Atualizando vdsc-core para @${CORE_VERSION}"
-          sed -i "s|vdsc-core @ .*|vdsc-core @ git+https://github.com/${{ env.CORE_REPO }}.git@${CORE_VERSION}|" src/requirements.txt
-          cat src/requirements.txt
+          sed -i "s|vdsc-core @ .*|vdsc-core @ git+https://${{ secrets.VDSC_PAT }}@github.com/${{ env.CORE_REPO }}.git@${CORE_VERSION}|" src/requirements.txt
+          echo "📋 requirements.txt atualizado (URL com autenticação embutida)"
 
       - name: Configurar Python
         uses: actions/setup-python@v5
