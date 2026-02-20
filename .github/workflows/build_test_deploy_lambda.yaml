@@ -42,7 +42,7 @@ env:
   VDSC_PNG_COMPRESSION_LEVEL: ${{ vars.VDSC_PNG_COMPRESSION_LEVEL }}
   VDSC_QUALITY: ${{ vars.VDSC_QUALITY }}
   VDSC_ZIP_COMPRESSION_LEVEL: ${{ vars.VDSC_ZIP_COMPRESSION_LEVEL }}
-  CORE_REPO: 11soat-hackton-videoslice/video-slice-core
+  CORE_REPO: 11soat-hackathon-videoslice/video-slice-core
 
 jobs:
   resolve-core-version:
@@ -72,16 +72,32 @@ jobs:
             # develop (push/workflow_dispatch): buscar último commit com pipeline bem-sucedida
             echo "📌 Branch develop → buscando último commit com pipeline bem-sucedida..."
 
-            SUCCESSFUL_SHA=$(curl -s -H "Authorization: token ${{ secrets.VDSC_PAT }}" \
-              "https://api.github.com/repos/${{ env.CORE_REPO }}/actions/runs?branch=develop&status=success&per_page=1" \
-              | jq -r '.workflow_runs[0].head_sha // empty')
+            API_URL="https://api.github.com/repos/${{ env.CORE_REPO }}/actions/runs?branch=develop&status=success&per_page=1"
+            echo "🔍 API URL: ${API_URL}"
 
-            if [ -z "$SUCCESSFUL_SHA" ]; then
-              echo "⚠️ Não foi possível obter commit bem-sucedido, usando fallback: develop"
+            API_RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: token ${{ secrets.VDSC_PAT }}" "${API_URL}")
+            HTTP_CODE=$(echo "$API_RESPONSE" | tail -1)
+            RESPONSE_BODY=$(echo "$API_RESPONSE" | sed '$d')
+
+            echo "📡 HTTP Status: ${HTTP_CODE}"
+
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "⚠️ API retornou status ${HTTP_CODE}, usando fallback: develop"
+              echo "📋 Resposta: $(echo "$RESPONSE_BODY" | jq -r '.message // .' 2>/dev/null)"
               CORE_VERSION="develop"
             else
-              CORE_VERSION="${SUCCESSFUL_SHA}"
-              echo "✅ Último commit bem-sucedido: ${CORE_VERSION}"
+              TOTAL_COUNT=$(echo "$RESPONSE_BODY" | jq -r '.total_count // 0')
+              echo "📊 Total de runs bem-sucedidas: ${TOTAL_COUNT}"
+
+              SUCCESSFUL_SHA=$(echo "$RESPONSE_BODY" | jq -r '.workflow_runs[0].head_sha // empty')
+
+              if [ -z "$SUCCESSFUL_SHA" ]; then
+                echo "⚠️ Nenhum commit bem-sucedido encontrado, usando fallback: develop"
+                CORE_VERSION="develop"
+              else
+                CORE_VERSION="${SUCCESSFUL_SHA}"
+                echo "✅ Último commit bem-sucedido: ${CORE_VERSION}"
+              fi
             fi
           fi
 
