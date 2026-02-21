@@ -3,38 +3,78 @@
 [![Build, Test and Deploy vdsc-prd-lmb-video-slice](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml/badge.svg)](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=11soat-hackton-videoslice_ms-video-slice&metric=alert_status&token=3efd14ba030056cee349ee594f5ecfd0e3e8dd0e)](https://sonarcloud.io/summary/new_code?id=11soat-hackton-videoslice_ms-video-slice)
 
-Microserviço AWS Lambda para processamento e fatiamento de vídeos.
+Microserviço AWS Lambda para processamento e captura de frames de vídeos.
 
 ## 📋 Visão Geral
 
-O **ms-video-slice** é o motor de processamento do sistema VideoSlice, implementado como AWS Lambda Function. Este microserviço serverless processa vídeos fazendo download do S3, aplicando transformações (redimensionamento, corte temporal, compressão), e gerando vídeos fatiados prontos para uso.
-
-### Funcionalidades
-
-- **Processamento de Vídeos**: Download, transformação e upload de vídeos
-- **Fatiamento Temporal**: Corte de vídeos em intervalos específicos
-- **Redimensionamento**: Ajuste de resolução (low, medium, high)
-- **Compressão**: Otimização de qualidade e tamanho
-- **Retry Automático**: Sistema de reprocessamento em caso de falha
-- **Integração com Core**: Utiliza a biblioteca video-slice-core para lógica de negócio
-- **Métricas CloudWatch**: Monitoramento via AWS Lambda Powertools
+O **ms-video-slice** é o motor de processamento do sistema VideoSlice, implementado como AWS Lambda Function. 
 
 ## 🏗️ Arquitetura
 
 O microserviço segue os princípios da **Clean Architecture**, utilizando a biblioteca core [video-slice-core](https://github.com/11soat-hackathon-videoslice/video-slice-core) para implementação das camadas de domínio e aplicação.
 
-### Fluxo de Execução
+### Funcionalidades
 
-1. **DynamoDB Stream** captura evento INSERT/MODIFY na tabela VideoSlice
-2. **EventBridge Pipes** roteia evento para SQS
-3. **SQS Queue** armazena eventos de processamento
-4. **Lambda Function** é trigada pela fila SQS
-5. **VideoSliceController** (da biblioteca core) orquestra o processamento
-6. **S3 Gateway** faz download do vídeo original
-7. **OpenCV/Pillow** processa o vídeo (corte, redimensionamento, compressão)
-8. **S3 Gateway** faz upload do vídeo processado
-9. **DynamoDB** é atualizado com status FINISHED ou ERROR
-10. **EventBridge** publica evento de notificação
+- **Processamento de Vídeos**: Download, transformação e upload de vídeos
+- **Captura Temporal**: Corte de vídeos em intervalos específicos ou recorrentes.
+- **Redimensionamento**: Ajuste de resolução (Ultra, Alta, Média, Baixa)
+- **Compressão**: Otimização de qualidade e tamanho
+- **Retry Automático**: Sistema de reprocessamento em caso de falha utilizando _Linear Backoff Retry_
+- **Integração com Core**: Utiliza a biblioteca video-slice-core para lógica de negócio
+- **Métricas CloudWatch**: Monitoramento via AWS Lambda Powertools
+
+### Diagramas de Sequência
+
+#### Processamento do Vídeo
+
+```mermaid
+sequenceDiagram
+    participant DDB as Dynamodb Streams
+    participant PIPE as vdsc-prd-pipe-to-bus
+    participant BUS as vdsc-prd-event-bus
+    participant SQS as vdsc-prd-sqs-video-slice
+    participant LMB as vdsc-prd-lmb-video-slice
+    participant TMP as /tmp
+    participant S3 as vdsc-prd-s3-videos
+    participant CW as VideoSliceMetrics
+
+    DDB->>PIPE: Evento INSERT (novo vídeo)
+    PIPE->>BUS: Direciona evento para Event Bus
+    BUS->>SQS: Envia mensagem para fila SQS
+    SQS->>LMB: Trigger — inicia processamento
+
+    activate LMB
+    LMB->>S3: Download do vídeo /tmp
+    S3-->>TMP: Vídeo baixado
+    
+
+     par Captura de Frames em Paralelo (/tmp)
+        LMB->>TMP: Captura frame 1
+    and
+        LMB->>TMP: Captura frame 2
+    and
+        LMB->>TMP: Captura frame N
+    end
+
+    LMB->>S3: Upload do arquivo ZIP (ZipStream)
+    LMB->>TMP: Limpeza do /tmp
+    LMB->>S3: Remoção do vídeo original
+
+    LMB->>BUS: Envia notificações
+    LMB->>CW: Envia métricas
+    deactivate LMB
+```
+#### Detalhamento do processo principal de captura de vídeos
+Quando falamos de arquitetura _Serveless_ temos a vantagem de não precisar se preocupar com a infraestrutura, mas temos que ter muita atenção com a otimização de recursos e tempo de execução para não disparar os custos.
+Por conta disso, o processo de captura de frames é projetado para otimizar os recursos e tempo de processamento. Abaixo detalho as abordagens utilizadas:
+- **Utilização do /tmp**: O diretório `/tmp` é utilizado para armazenar temporariamente os vídeos baixados e os frames capturados, garantindo que o processo seja eficiente e não dependa de armazenamento externo durante a execução
+- **Captura de Frames em Paralelo**: Utilização de processamento paralelo para captura de frames, reduzindo significativamente o tempo total de processamento.
+- **Separação de Captura e Persistência**: É fundamental separar a captura de frames da persistência dos arquivos, não gerando eventos bloqueadores e diminuindo a eficiência do paralelismo
+- **Compressão com ZipStream**: A biblioteca ZipStream é utilizada para criar arquivos ZIP de forma eficiente, sem a necessidade de armazenar todos os frames na memória, o que é crucial para vídeos longos ou com muitos frames.
+
+Abaixo um diagrama detalahando o processo de captura de frames:
+![Diagrama de Captura de Frames](doc/images/vdsc_core_claro.drawio.png)
+
 
 ## 🚀 Tecnologias
 
