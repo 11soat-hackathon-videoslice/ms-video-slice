@@ -23,8 +23,6 @@ O microserviço segue os princípios da **Clean Architecture**, utilizando a bib
 - **Integração com Core**: Utiliza a biblioteca video-slice-core para lógica de negócio
 - **Métricas CloudWatch**: Monitoramento via AWS Lambda Powertools
 
-
-
 ### Diagramas de Sequência
 
 ### Detalhamento do processo principal - Captura de frames de vídeos
