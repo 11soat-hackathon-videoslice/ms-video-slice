@@ -25,7 +25,7 @@ O microserviço segue os princípios da **Clean Architecture**, utilizando a bib
 
 ### Diagramas de Sequência
 
-### Detalhamento do processo principal - Captura de frames de vídeos
+### Detalhamento do processo principal - Captura de frames de vídeos e ZipStream
 Quando falamos de arquitetura _Serveless_ temos a vantagem de não precisar se preocupar com a infraestrutura, mas temos que ter muita atenção com a otimização de recursos e tempo de execução para não disparar os custos.
 Por conta disso, o processo de captura de frames é projetado para otimizar os recursos e tempo de processamento. Abaixo detalho as abordagens utilizadas:
 - **Utilização do /tmp**: O diretório `/tmp` é utilizado para armazenar temporariamente os vídeos baixados e os frames capturados, garantindo que o processo seja eficiente e não dependa de armazenamento externo durante a execução
@@ -34,18 +34,21 @@ Por conta disso, o processo de captura de frames é projetado para otimizar os r
 - **Compressão com ZipStream**: A biblioteca ZipStream é utilizada para criar arquivos ZIP de forma eficiente, sem a necessidade de armazenar todos os frames na memória, o que é crucial para vídeos longos ou com muitos frames.
 
 Abaixo um diagrama detalhando o processo de captura de frames:
-![Diagrama de Captura de Frames](doc/images/vdsc_core_claro.drawio.png)
+| |
+|:---:|
+| ![Diagrama de Captura de Frames](doc/images/vdsc_core_claro.drawio.png) |
+
 
 ```mermaid
 sequenceDiagram
     participant DDB as Dynamodb Streams
-    participant PIPE as vdsc-prd-pipe-to-bus
-    participant BUS as vdsc-prd-event-bus
-    participant SQS as vdsc-prd-sqs-video-slice
-    participant LMB as vdsc-prd-lmb-video-slice
+    participant PIPE as vdsc-prd-pipe-to-bus<br/>(EventBridge Pipe)
+    participant BUS as vdsc-prd-event-bus<br/>(EventBridge)
+    participant SQS as vdsc-prd-sqs-video-slice<br/>(SQS Queue)
+    participant LMB as vdsc-prd-lmb-video-slice<br/>(Lambda)
     participant TMP as /tmp
-    participant S3 as vdsc-prd-s3-videos
-    participant CW as VideoSliceMetrics
+    participant S3 as vdsc-prd-s3-videos<br/>(S3 Bucket)
+    participant CW as VideoSliceMetrics<br/>(CloudWatch)
 
     DDB->>PIPE: Evento INSERT (novo vídeo)
     PIPE->>BUS: Direciona evento para Event Bus
