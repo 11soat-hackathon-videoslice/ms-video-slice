@@ -25,18 +25,30 @@ O microserviço segue os princípios da **Clean Architecture**, utilizando a bib
 
 ### Diagramas de Sequência
 
-#### Processamento do Vídeo
+### Detalhamento do processo principal - Captura de frames de vídeos e ZipStream
+Quando falamos de arquitetura _Serveless_ temos a vantagem de não precisar se preocupar com a infraestrutura, mas temos que ter muita atenção com a otimização de recursos e tempo de execução para não disparar os custos.
+Por conta disso, o processo de captura de frames é projetado para otimizar os recursos e tempo de processamento. Abaixo detalho as abordagens utilizadas:
+- **Utilização do /tmp**: O diretório `/tmp` é utilizado para armazenar temporariamente os vídeos baixados e os frames capturados, garantindo que o processo seja eficiente e não dependa de armazenamento externo durante a execução
+- **Captura de Frames em Paralelo**: Utilização de processamento paralelo para captura de frames, reduzindo significativamente o tempo total de processamento.
+- **Separação de Captura e Persistência**: É fundamental separar a captura de frames da persistência dos arquivos, não gerando eventos bloqueadores e diminuindo a eficiência do paralelismo
+- **Compressão com ZipStream**: A biblioteca ZipStream é utilizada para criar arquivos ZIP de forma eficiente, sem a necessidade de armazenar todos os frames na memória, o que é crucial para vídeos longos ou com muitos frames.
+
+Abaixo um diagrama detalhando o processo de captura de frames:
+| |
+|:---:|
+| ![Diagrama de Captura de Frames](doc/images/vdsc_core_claro.drawio.png) |
+
 
 ```mermaid
 sequenceDiagram
     participant DDB as Dynamodb Streams
-    participant PIPE as vdsc-prd-pipe-to-bus
-    participant BUS as vdsc-prd-event-bus
-    participant SQS as vdsc-prd-sqs-video-slice
-    participant LMB as vdsc-prd-lmb-video-slice
+    participant PIPE as vdsc-prd-pipe-to-bus<br/>(EventBridge Pipe)
+    participant BUS as vdsc-prd-event-bus<br/>(EventBridge)
+    participant SQS as vdsc-prd-sqs-video-slice<br/>(SQS Queue)
+    participant LMB as vdsc-prd-lmb-video-slice<br/>(Lambda)
     participant TMP as /tmp
-    participant S3 as vdsc-prd-s3-videos
-    participant CW as VideoSliceMetrics
+    participant S3 as vdsc-prd-s3-videos<br/>(S3 Bucket)
+    participant CW as VideoSliceMetrics<br/>(CloudWatch)
 
     DDB->>PIPE: Evento INSERT (novo vídeo)
     PIPE->>BUS: Direciona evento para Event Bus
@@ -64,17 +76,46 @@ sequenceDiagram
     LMB->>CW: Envia métricas
     deactivate LMB
 ```
-#### Detalhamento do processo principal de captura de vídeos
-Quando falamos de arquitetura _Serveless_ temos a vantagem de não precisar se preocupar com a infraestrutura, mas temos que ter muita atenção com a otimização de recursos e tempo de execução para não disparar os custos.
-Por conta disso, o processo de captura de frames é projetado para otimizar os recursos e tempo de processamento. Abaixo detalho as abordagens utilizadas:
-- **Utilização do /tmp**: O diretório `/tmp` é utilizado para armazenar temporariamente os vídeos baixados e os frames capturados, garantindo que o processo seja eficiente e não dependa de armazenamento externo durante a execução
-- **Captura de Frames em Paralelo**: Utilização de processamento paralelo para captura de frames, reduzindo significativamente o tempo total de processamento.
-- **Separação de Captura e Persistência**: É fundamental separar a captura de frames da persistência dos arquivos, não gerando eventos bloqueadores e diminuindo a eficiência do paralelismo
-- **Compressão com ZipStream**: A biblioteca ZipStream é utilizada para criar arquivos ZIP de forma eficiente, sem a necessidade de armazenar todos os frames na memória, o que é crucial para vídeos longos ou com muitos frames.
+#### Reprocessamento em Caso de Falha - _Linear Backoff Retry_
+Sabemos que o processamento de vídeo pode ser suscetível a falhas, seja por limitações de recursos, erros temporários ou outros fatores. 
+Para garantir a resiliência do sistema, implementamos um mecanismo de retry automático utilizando a estratégia de _Linear Backoff Retry_.
+De forma parametrizável é possível configurar o número máximo de tentativas e o intervalo progressivo entre elas.
+Exemplo, configuro máximo de 3 tentativas com fator de 5 minutos: primeira tentativa em 5 minutos, segunda em 10 minutos, terceira em 15 minutos.
 
-Abaixo um diagrama detalahando o processo de captura de frames:
-![Diagrama de Captura de Frames](doc/images/vdsc_core_claro.drawio.png)
+```mermaid
+sequenceDiagram
+    autonumber
 
+    participant LMB as vdsc-prd-lmb-video-slice<br/>(Lambda)
+    participant BUS as vdsc-prd-event-bus<br/>(EventBridge)
+    participant SCH as EventBridge Scheduler
+    participant SQS as vdsc-prd-sqs-video-slice<br/>(SQS Queue)
+
+    loop Linear Backoff Retry (máx. 3 tentativas)
+        activate LMB
+        Note over LMB: Tentativa de processamento do vídeo
+        LMB --x LMB: ❌ Falha no processamento
+
+        LMB ->> BUS: Publica evento de retentativa<br/>(retries + 1, status = RETRY)
+        deactivate LMB
+
+        BUS ->> SCH: Cria agendamento com delay progressivo<br/>(tentativa 1 → 5 min / 2 → 10 min / 3 → 15 min)
+
+        Note over SCH: ⏱️ Aguarda intervalo agendado
+
+        SCH ->> SQS: Envia evento de retentativa para a fila<br/>(no tempo agendado)
+        SQS ->> LMB: Trigger Lambda — nova tentativa de processamento
+    end
+
+    alt retries < maxRetries → ainda com falha
+        Note over LMB: 🔁 Reinicia o loop com retries + 1
+    else retries >= maxRetries → falha definitiva
+        activate LMB
+        LMB ->> BUS: Publica evento de falha definitiva<br/>(status = ERROR)
+        deactivate LMB
+        Note over LMB: ❌ Processamento encerrado com erro
+    end
+```
 
 ## 🚀 Tecnologias
 
