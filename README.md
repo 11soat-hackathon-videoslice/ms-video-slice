@@ -1,5 +1,26 @@
 # MS Video Slice
 
+## Índice
+
+- [Visão Geral](#-visão-geral)
+- [Arquitetura](#-arquitetura)
+- [Funcionalidades](#funcionalidades)
+- [Diagramas de Sequência](#diagramas-de-sequência)
+- [Detalhamento do processo principal - Captura de frames de vídeos e ZipStream](#detalhamento-do-processo-principal---captura-de-frames-de-vídeos-e-zipstream)
+- [Reprocessamento em Caso de Falha - _Linear Backoff Retry_](#reprocessamento-em-caso-de-falha---linear-backoff-retry)
+- [Tecnologias](#-tecnologias)
+- [Dependências](#-dependências)
+- [Configuração](#-configuração)
+- [Estrutura de Mensagens](#-estrutura-de-mensagens)
+- [Opções de Processamento](#-opções-de-processamento)
+- [Testes](#-testes)
+- [Deploy](#-deploy)
+- [Integração](#-integração)
+- [Permissões IAM](#-permissões-iam)
+- [Configuração de Lambda](#-configuração-de-lambda)
+- [Status de Processamento](#-status-de-processamento)
+- [Fluxo de Reprocessamento](#-fluxo-de-reprocessamento)
+
 [![Build, Test and Deploy vdsc-prd-lmb-video-slice](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml/badge.svg)](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=11soat-hackton-videoslice_ms-video-slice&metric=alert_status&token=3efd14ba030056cee349ee594f5ecfd0e3e8dd0e)](https://sonarcloud.io/summary/new_code?id=11soat-hackton-videoslice_ms-video-slice)
 
