@@ -132,7 +132,7 @@ sequenceDiagram
         Note over LMB: 🔁 Reinicia o loop com retries + 1
     else retries >= maxRetries → falha definitiva
         activate LMB
-        LMB ->> BUS: Publica evento de falha definitiva<br/>(status = ERROR)
+        LMB ->> BUS: Publica evento de falha definitiva<br/>(status = FAILED)
         deactivate LMB
         Note over LMB: ❌ Processamento encerrado com erro
     end
@@ -381,13 +381,13 @@ A Lambda Function requer as seguintes permissões:
 
 O sistema gerencia os seguintes status:
 
-| Status | Descrição |
-|--------|-----------|
-| `UPLOADED` | Vídeo enviado, aguardando processamento |
-| `PROCESSING` | Vídeo em processamento |
-| `FINISHED` | Processamento concluído com sucesso |
-| `ERROR` | Erro no processamento |
-| `RETRY` | Aguardando reprocessamento |
+| Status       | Descrição                               |
+|--------------|-----------------------------------------|
+| `UPLOADED`   | Vídeo enviado, aguardando processamento |
+| `PROCESSING` | Vídeo em processamento                  |
+| `FINISHED`   | Processamento concluído com sucesso     |
+| `FAILED`     | Falha no processamento                  |
+| `RETRY`      | Aguardando reprocessamento              |
 
 ## 🔄 Fluxo de Reprocessamento
 
@@ -396,7 +396,7 @@ O sistema gerencia os seguintes status:
 3. Se `retries < maxRetries`, status muda para `RETRY`
 4. Evento é republicado para SQS
 5. Lambda processa novamente
-6. Se `retries >= maxRetries`, status muda para `ERROR` permanentemente
+6. Se `retries >= maxRetries`, status muda para `FAILED` permanentemente
 
 **Versão**: 1.0.0  
 **Região AWS**: us-east-1  
