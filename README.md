@@ -1,4 +1,8 @@
 # MS Video Slice
+[![Build, Test and Deploy vdsc-prd-lmb-video-slice](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml/badge.svg)](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=11soat-hackton-videoslice_ms-video-slice&metric=alert_status&token=3efd14ba030056cee349ee594f5ecfd0e3e8dd0e)](https://sonarcloud.io/summary/new_code?id=11soat-hackton-videoslice_ms-video-slice)
+
+Microserviço AWS Lambda para processamento e captura de frames de vídeos.
 
 ## Índice
 
@@ -21,10 +25,6 @@
 - [Status de Processamento](#-status-de-processamento)
 - [Fluxo de Reprocessamento](#-fluxo-de-reprocessamento)
 
-[![Build, Test and Deploy vdsc-prd-lmb-video-slice](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml/badge.svg)](https://github.com/11soat-hackathon-videoslice/ms-video-slice/actions/workflows/build_test_deploy_lambda.yaml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=11soat-hackton-videoslice_ms-video-slice&metric=alert_status&token=3efd14ba030056cee349ee594f5ecfd0e3e8dd0e)](https://sonarcloud.io/summary/new_code?id=11soat-hackton-videoslice_ms-video-slice)
-
-Microserviço AWS Lambda para processamento e captura de frames de vídeos.
 
 ## 📋 Visão Geral
 
