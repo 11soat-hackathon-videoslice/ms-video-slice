@@ -11,7 +11,7 @@ Microserviço AWS Lambda para processamento e captura de frames de vídeos.
 - [Funcionalidades](#funcionalidades)
 - [Diagramas de Sequência](#diagramas-de-sequência)
 - [Detalhamento do processo principal - Captura de frames de vídeos e ZipStream](#detalhamento-do-processo-principal---captura-de-frames-de-vídeos-e-zipstream)
-- [Reprocessamento em Caso de Falha - _Linear Backoff Retry_](#reprocessamento-em-caso-de-falha---linear-backoff-retry)
+- [Reprocessamento em Caso de Falha - Linear Backoff Retry](#reprocessamento-em-caso-de-falha---linear-backoff-retry)
 - [Tecnologias](#-tecnologias)
 - [Dependências](#-dependências)
 - [Configuração](#-configuração)
@@ -54,6 +54,15 @@ Por conta disso, o processo de captura de frames é projetado para otimizar os r
 - **Separação de Captura e Persistência**: É fundamental separar a captura de frames da persistência dos arquivos, não gerando eventos bloqueadores e diminuindo a eficiência do paralelismo
 - **Compressão com ZipStream**: A biblioteca ZipStream é utilizada para criar arquivos ZIP de forma eficiente, sem a necessidade de armazenar todos os frames na memória, o que é crucial para vídeos longos ou com muitos frames.
 
+Detalhes da implementação:
+- Processo Pai de Processamento de Video - [slice_process_util.py - process_video](https://github.com/11soat-hackathon-videoslice/video-slice-core/blob/master/src/core/utils/slice_process_util.py#L139)
+- Processo de processamento de cada frame - [slice_video_process_frame_util.py - process_video_frame](https://github.com/11soat-hackathon-videoslice/video-slice-core/blob/master/src/core/utils/slice_video_process_frame_util.py#L13)
+- Fila de Persistência da Imagem do Frame - [slice_process_util.py - _save_frames_from_queue](https://github.com/11soat-hackathon-videoslice/video-slice-core/blob/master/src/core/utils/slice_process_util.py#L257)
+- Upload - ZipStream:
+  - [storage_repository.py - _create_zipstream](https://github.com/11soat-hackathon-videoslice/ms-video-slice/blob/master/src/aws/datasources/storage/storage_repository.py#L100)
+  - [storage_repository.py - upload_finished_zip](https://github.com/11soat-hackathon-videoslice/ms-video-slice/blob/master/src/aws/datasources/storage/storage_repository.py#L87)
+
+ 
 Abaixo um diagrama detalhando o processo de captura de frames:
 | |
 |:---:|
@@ -177,18 +186,26 @@ sequenceDiagram
 
 A Lambda Function requer as seguintes variáveis de ambiente:
 
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `AWS_REGION` | Região AWS (configurada automaticamente) | `us-east-1` |
-| `S3_BUCKET_NAME` | Nome do bucket S3 | `vdsc-prd-s3-videos` |
-| `S3_BUCKET_DIR_UPLOADS` | Diretório de uploads | `uploads/` |
-| `S3_BUCKET_DIR_FINISHED` | Diretório de vídeos processados | `finished/` |
-| `DYNAMODB_TABLE_NAME` | Nome da tabela DynamoDB | `VideoSlice` |
-| `EVENTBRIDGE_BUS_NAME` | Nome do barramento EventBridge | `vdsc-prd-eventbridge` |
-| `POWERTOOLS_SERVICE_NAME` | Nome do serviço para métricas | `video-slice` |
-| `POWERTOOLS_METRICS_NAMESPACE` | Namespace de métricas | `VideoSlice` |
+#### Variáveis de Ambientes
 
-**Nota**: As variáveis `AWS_REGION` e `PYTHON_VERSION` são configuradas automaticamente pela AWS e não devem ser incluídas na configuração da Lambda.
+| Variável | Descrição | Exemplo | Valor Padrão |
+|----------|-----------|---------|--------------|
+| `AWS_REGION` | Região AWS (configurada automaticamente pela AWS) | `us-east-1` | `us-east-1` |
+| `DYNAMODB_TABLE_NAME` | Nome da tabela DynamoDB | `VideoSlice` | `VideoSlice` |
+| `EVENT_BUS_NAME` | Nome do barramento EventBridge para notificações | `vdsc-prd-event-bus` | `vdsc-prd-event-bus` |
+| `POWERTOOLS_SERVICE_NAME` | Configurado no código | Valor fixo `VideoSlice` definido em `slice_config.py` |
+| `POWERTOOLS_METRICS_NAMESPACE` | Configurado no código | Valor fixo `VideoSliceMetrics` definido em `slice_config.py` |
+| `S3_BUCKET_NAME` | Nome do bucket S3 para armazenamento de vídeos | `vdsc-prd-s3-videos` | `vdsc-prd-s3-videos` |
+| `SCHEDULE_EVENT_RETRY_BACKOFF_FACTOR` | Fator de backoff para retry em minutos | `5` | `5` |
+| `SCHEDULE_TARGET_ARN` | ARN da fila SQS para reprocessamento | `arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice` | `arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice` |
+| `SCHEDULE_EVENT_ROLE_ARN` | ARN da role IAM para EventBridge Scheduler | `arn:aws:iam::080145351546:role/vdsc-prd-schduler-role` | `arn:aws:iam::080145351546:role/vdsc-prd-schduler-role` |
+| `SCHEDULE_EVENT_DLQ` | ARN da Dead Letter Queue para mensagens com falha | `arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice-dlq` | `arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice-dlq` |
+| `VDSC_DIR_UPLOADS` | Diretório S3 de uploads | `uploads` | `uploads` |
+| `VDSC_DIR_FINISHED` | Diretório S3 de vídeos processados | `finished` | `finished` |
+| `VDSC_DIR_TMP` | Diretório temporário da Lambda | `/tmp` | `/tmp` |
+| `VDSC_MAX_WORKERS` | Número de workers para processamento paralelo | `10` | `10` |
+| `VDSC_RESIZE` | Mapeamento de resoluções em formato JSON | `{"ultra": 1080, "high": 720, "medium": 480, "low": 360}` | `{"ultra": 1080, "high": 720, "medium": 480, "low": 360}` |
+
 
 ## 📨 Estrutura de Mensagens
 
