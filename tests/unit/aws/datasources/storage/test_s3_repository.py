@@ -59,10 +59,14 @@ class TestS3StorageRepository:
         )
 
     def test_delete_file_error(self, repository, mock_s3_client):
-        """Testa erro ao deletar arquivo"""
+        """Testa erro ao deletar arquivo é tratado graciosamente"""
         mock_s3_client.delete_object.side_effect = Exception("S3 error")
-        with pytest.raises(Exception):
-            repository.delete_file("test/file.txt")
+        # Não deve lançar exceção, apenas logar o erro
+        repository.delete_file("test/file.txt")
+        mock_s3_client.delete_object.assert_called_once_with(
+            Bucket="test-bucket",
+            Key="test/file.txt"
+        )
 
     def test_open_file(self, repository, mock_s3_client):
         """Testa abertura de arquivo"""
@@ -112,11 +116,12 @@ class TestS3StorageRepository:
             mock_rmtree.assert_called_once_with("tmp/path")
 
     def test_delete_temp_files_error(self, repository):
-        """Testa erro ao deletar arquivos temporários"""
+        """Testa erro ao deletar arquivos temporários é tratado graciosamente"""
         with patch('shutil.rmtree') as mock_rmtree:
             mock_rmtree.side_effect = Exception("rmtree error")
-            with pytest.raises(Exception):
-                repository.delete_temp_files("tmp/path")
+            # Não deve lançar exceção, apenas logar o erro
+            repository.delete_temp_files("tmp/path")
+            mock_rmtree.assert_called_once_with("tmp/path")
 
     def test_create_zipstream(self, repository):
         """Testa criação de zipstream"""

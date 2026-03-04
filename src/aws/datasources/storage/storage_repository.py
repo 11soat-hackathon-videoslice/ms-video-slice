@@ -49,7 +49,6 @@ class StorageStorageRepository(StorageInterface):
             logger.info(f"Arquivo deletado com sucesso: s3://{self.bucket_name}/{file_path}")
         except Exception as e:
             logger.error(f"Erro ao deletar arquivo {file_path}: {str(e)}", exc_info=True)
-            raise
 
     def delete_temp_files(self, tmp_path:str) -> None:
         """Deleta arquivos temporários localmente"""
@@ -59,7 +58,6 @@ class StorageStorageRepository(StorageInterface):
             logger.info(f"Arquivos temporários deletados com sucesso: {tmp_path}")
         except Exception as e:
             logger.error(f"Erro ao deletar arquivos temporários {tmp_path}: {str(e)}", exc_info=True)
-            raise
 
     def open_file(self, file_path: str) -> bytes:
         """Lê e retorna o conteúdo de um arquivo do S3"""
