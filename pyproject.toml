@@ -33,7 +33,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["."]
-pythonpath = ["../src"]
+pythonpath = ["src"]
 markers = [
     "unit: marca testes unitários"
 ]
