@@ -106,9 +106,9 @@ sequenceDiagram
     LMB->>CW: Envia métricas
     deactivate LMB
 ```
-#### Reprocessamento em Caso de Falha - _Linear Backoff Retry_
+#### Reprocessamento em Caso de Falha - Linear Backoff Retry
 Sabemos que o processamento de vídeo pode ser suscetível a falhas, seja por limitações de recursos, erros temporários ou outros fatores. 
-Para garantir a resiliência do sistema, implementamos um mecanismo de retry automático utilizando a estratégia de _Linear Backoff Retry_.
+Para garantir a resiliência do sistema, implementamos um mecanismo de retry automático utilizando a estratégia de Linear Backoff Retry.
 De forma parametrizável é possível configurar o número máximo de tentativas e o intervalo progressivo entre elas.
 Exemplo, configuro máximo de 3 tentativas com fator de 5 minutos: primeira tentativa em 5 minutos, segunda em 10 minutos, terceira em 15 minutos.
 
