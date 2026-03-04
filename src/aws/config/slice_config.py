@@ -18,7 +18,7 @@ metrics = Metrics(namespace="VideoSliceMetrics", service="VideoSlice")
 resize = json.loads(os.getenv('VDSC_RESIZE', '{"ultra": 1080, "high": 720, "medium": 480, "low": 360}').replace('\\', ''))
 schedule_event_rules = {
     'retry_backoff_factor':  int(os.getenv('SCHEDULE_EVENT_RETRY_BACKOFF_FACTOR', '5')),
-    'retry_arn': os.getenv('SCHEDULE_EVENT_ROLE_ARN', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice'),
+    'retry_arn': os.getenv('SCHEDULE_TARGET_ARN', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice'),
     'retry_role_arn': os.getenv('SCHEDULE_EVENT_ROLE_ARN', 'arn:aws:iam::080145351546:role/vdsc-prd-schduler-role'),
     'retry_dlq': os.getenv('SCHEDULE_EVENT_DLQ', 'arn:aws:sqs:us-east-1:080145351546:vdsc-prd-sqs-video-slice-dlq')
 }
